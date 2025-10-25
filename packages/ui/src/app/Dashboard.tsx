@@ -424,40 +424,7 @@ export const Dashboard = () => {
     }
   };
 
-  const addLink = () => {
-    setLinks([...links, { label: "", url: "", icon: "" }]);
-  };
 
-  const updateLink = (index: number, field: keyof LinkItem, value: string) => {
-    const newLinks = [...links];
-    newLinks[index] = { ...newLinks[index], [field]: value };
-    setLinks(newLinks);
-  };
-
-  const removeLink = (index: number) => {
-    setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const handleUpdateTags = async (profileId: string) => {
-    setIsLoading(true);
-    try {
-      // TODO: Contract needs to be re-published with update_tags function
-      alert("⚠️ Tag feature is ready! Please re-publish the Move contract to use this feature on-chain.\n\nFor now, tags are saved locally in your browser.");
-      console.log("Tags to update:", selectedTags);
-      // await updateTags(profileId, selectedTags);
-      // await refetch();
-    } catch (error) {
-      console.error("Failed to update tags:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   if (!account) {
     return (
