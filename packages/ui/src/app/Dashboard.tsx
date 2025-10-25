@@ -15,7 +15,7 @@ import { useProfileTransactions } from "../sui/tx";
 import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
 import { useFirebaseAnalytics } from "../hooks/useAnalytics";
 import { useBlockchainSync } from "../hooks/useBlockchainSync";
-import { updateAnalyticsLinks, initializeAnalytics, incrementLinkClick, getAnalytics } from "../firebase/analytics";
+import { updateAnalyticsLinks, initializeAnalytics, incrementLinkClick, getAnalytics, deleteAnalytics } from "../firebase/analytics";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 
@@ -87,11 +87,17 @@ const ProfileCard = ({
   // Initialize Firebase analytics if needed (safe initialization)
   useEffect(() => {
     if (!profileId || existingLinks.length === 0) return;
-    if (!isLoading && analytics === null) {
-      console.log("Initializing analytics for profile:", profileId, "with links:", existingLinks);
-      initializeAnalytics(profileId, existingLinks).then(() => refreshAnalytics());
-    }
-  }, [profileId, existingLinks, isLoading, analytics, refreshAnalytics]);
+
+    (async () => {
+      const a = await getAnalytics(profileId);
+      if (!a) {
+        await initializeAnalytics(profileId, existingLinks);
+      } else if (JSON.stringify(a.links) !== JSON.stringify(existingLinks)) {
+        await updateAnalyticsLinks(profileId, existingLinks);
+      }
+      refreshAnalytics();
+    })();
+  }, [profileId, JSON.stringify(existingLinks), refreshAnalytics]);
 
   // Refresh analytics when component becomes visible (user returns from PublicProfile)
   useEffect(() => {
@@ -546,6 +552,7 @@ export const Dashboard = () => {
     setIsLoading(true);
     try {
       await deleteProfile(profileId);
+      await deleteAnalytics(profileId);
       await refetch();
     } catch (error) {
       console.error("Failed to delete profile:", error);

@@ -1,6 +1,7 @@
 import { db } from "./config";
 import {
   doc,
+  deleteDoc,
   getDoc,
   setDoc,
   updateDoc,
@@ -49,6 +50,20 @@ export async function getAnalytics(
   } catch (error) {
     console.error("Error getting analytics from Firebase:", error);
     return null;
+  }
+}
+
+/**
+ * Delete analytics for a profile
+ */
+export async function deleteAnalytics(profileId: string): Promise<void> {
+  try {
+    const docRef = doc(db, "analytics", profileId);
+    await deleteDoc(docRef);
+    console.log(`Analytics deleted for profile ${profileId}`);
+  } catch (error) {
+    console.error("Error deleting analytics:", error);
+    throw error;
   }
 }
 
