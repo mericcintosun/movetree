@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -12,7 +12,10 @@ import {
 } from "@radix-ui/themes";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useProfileTransactions } from "../sui/tx";
-import { useOwnedProfiles, useSimilarProfiles, useProfileAnalytics } from "../sui/queries";
+import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
+import { useFirebaseAnalytics } from "../hooks/useAnalytics";
+import { useBlockchainSync } from "../hooks/useBlockchainSync";
+import { updateAnalyticsLinks, initializeAnalytics } from "../firebase/analytics";
 
 interface LinkItem {
   label: string;
@@ -46,14 +49,37 @@ const ProfileCard = ({
 }: any) => {
   const profileData = (profile.data?.content as any)?.fields;
   const profileId = profile.data?.objectId || "";
-  const analytics = useProfileAnalytics(profileId); // ✅ Hook artık component içinde
   
-  const [links, setLinks] = useState<LinkItem[]>([
-    { label: "", url: "", icon: "" },
-  ]);
+  // Use Firebase analytics instead of blockchain
+  const { analytics } = useFirebaseAnalytics(profileId);
+  
+  // Auto-sync to blockchain every 2 days
+  const { isSyncing, performSync } = useBlockchainSync();
+  
+  // Load existing links from blockchain
+  const existingLinks = profileData?.links || [];
+  const [links, setLinks] = useState<LinkItem[]>(
+    existingLinks.length > 0 
+      ? existingLinks.map((url: string) => ({ label: "", url, icon: "" }))
+      : [{ label: "", url: "", icon: "" }]
+  );
   const [selectedTags, setSelectedTags] = useState<string[]>(
     profileData?.tags || []
   );
+
+  // Update links when profile data changes
+  useEffect(() => {
+    if (existingLinks.length > 0) {
+      setLinks(existingLinks.map((url: string) => ({ label: "", url, icon: "" })));
+    }
+  }, [JSON.stringify(existingLinks)]);
+
+  // Initialize Firebase analytics if needed
+  useEffect(() => {
+    if (!analytics && profileId && existingLinks.length > 0) {
+      initializeAnalytics(profileId, existingLinks);
+    }
+  }, [analytics, profileId, existingLinks]);
 
   const addLink = () => {
     setLinks([...links, { label: "", url: "", icon: "" }]);
@@ -85,7 +111,7 @@ const ProfileCard = ({
           {profileData?.name || "Unnamed Profile"}
         </Heading>
         <Badge size="2" color="blue" radius="full">
-          👁️ {analytics.profileViews} views
+          👁️ {analytics?.profileViews ?? 0} views
         </Badge>
       </Flex>
 
@@ -113,7 +139,7 @@ const ProfileCard = ({
                 size="1"
               />
               <TextField.Root
-                placeholder="URL"
+                placeholder="https://example.com"
                 value={link.url}
                 onChange={(e: any) =>
                   updateLink(index, "url", e.target.value)
@@ -130,7 +156,7 @@ const ProfileCard = ({
               />
               {/* Show click count */}
               <Badge color="gray" variant="soft">
-                {analytics.linkClicks[index] || 0} clicks
+                {analytics?.linkClicks?.[index] ?? 0} clicks
               </Badge>
               <Button
                 size="1"
@@ -154,7 +180,7 @@ const ProfileCard = ({
         </Box>
 
         {/* Analytics Chart - Simple Bar Graph */}
-        {analytics.linkClicks.length > 0 && (
+        {analytics && analytics.linkClicks.length > 0 && (
           <Box>
             <Text size="2" weight="bold" mb="2">
               📊 Link Performance
@@ -249,6 +275,29 @@ const ProfileCard = ({
           </Button>
         </Box>
 
+        {/* Blockchain Sync Status */}
+        <Box>
+          <Flex justify="between" align="center" mb="2">
+            <Text size="2" weight="bold">
+              Blockchain Sync
+            </Text>
+            <Badge color={isSyncing ? "orange" : "green"} variant="soft">
+              {isSyncing ? "Syncing..." : "Up to date"}
+            </Badge>
+          </Flex>
+          <Text size="1" color="gray" mb="2">
+            Analytics auto-sync to blockchain every 2 days
+          </Text>
+          <Button
+            size="1"
+            variant="outline"
+            onClick={performSync}
+            disabled={isSyncing}
+          >
+            {isSyncing ? "Syncing..." : "Force Sync Now"}
+          </Button>
+        </Box>
+
         <Box>
           <Button
             size="1"
@@ -289,7 +338,7 @@ export const Dashboard = () => {
   const currentProfileId = profiles?.data?.[0]?.data?.objectId;
 
   // Get similar profiles
-  const { data: similarProfiles } = useSimilarProfiles(
+  const { data: similarProfiles, refetch: refetchSimilarProfiles } = useSimilarProfiles(
     currentProfileTags,
     currentProfileId
   );
@@ -317,7 +366,19 @@ export const Dashboard = () => {
   const handleUpdateLinks = async (profileId: string, links: LinkItem[]) => {
     setIsLoading(true);
     try {
+      console.log('Updating links:', links);
+      
+      // Update blockchain (updateLinks will filter empty URLs)
       await updateLinks(profileId, links);
+      
+      // Get filtered URLs for Firebase cache
+      const urls = links
+        .map(l => l.url)
+        .filter(url => url && url.trim() !== "");
+      
+      // Update Firebase cache with filtered URLs
+      await updateAnalyticsLinks(profileId, urls);
+      
       await refetch();
       alert("✅ Links updated successfully!");
     } catch (error) {
@@ -333,6 +394,7 @@ export const Dashboard = () => {
     try {
       await updateTags(profileId, tags);
       await refetch();
+      await refetchSimilarProfiles(); // Refresh similar profiles
       alert("✅ Tags updated successfully on blockchain!");
     } catch (error) {
       console.error("Failed to update tags:", error);

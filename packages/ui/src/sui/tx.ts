@@ -32,14 +32,24 @@ export const useProfileTransactions = () => {
     profileId: string,
     links: Array<{ label: string; url: string; icon?: string }>,
   ) => {
+    // Filter out empty links and get only URLs (for now, until new contract is deployed)
     const urls = links
       .map((l) => l.url)
       .filter((url) => url && url.trim() !== "");
 
+    console.log('updateLinks called with:', { 
+      profileId, 
+      originalLinks: links, 
+      filteredUrls: urls
+    });
+
     const tx = new Transaction();
     tx.moveCall({
       target: `${import.meta.env.VITE_PACKAGE_ID}::profile::upsert_links`,
-      arguments: [tx.object(profileId), tx.pure.vector("string", urls)],
+      arguments: [
+        tx.object(profileId), 
+        tx.pure.vector("string", urls)
+      ],
     });
 
     return await signAndExecuteTransaction({ transaction: tx });
