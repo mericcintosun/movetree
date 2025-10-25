@@ -132,3 +132,18 @@ export const useSimilarProfiles = (userTags: string[], currentProfileId?: string
     enabled: userTags && userTags.length > 0,
   });
 };
+
+// Get profile analytics (views and link clicks)
+export const useProfileAnalytics = (objectId: string) => {
+  const { data: profile } = useProfile(objectId);
+  
+  if (!profile?.data?.content || profile.data.content.dataType !== "moveObject") {
+    return { profileViews: 0, linkClicks: [] };
+  }
+
+  const fields = profile.data.content.fields as any;
+  return {
+    profileViews: Number(fields.profile_views || 0),
+    linkClicks: (fields.link_clicks || []).map((count: string) => Number(count)),
+  };
+};
