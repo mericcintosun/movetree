@@ -101,6 +101,16 @@ export const useProfileTransactions = () => {
     return await signAndExecuteTransaction({ transaction: tx });
   };
 
+  const updateTags = async (profileId: string, tags: string[]) => {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::update_tags`,
+      arguments: [tx.object(profileId), tx.pure.vector("string", tags)],
+    });
+
+    return await signAndExecuteTransaction({ transaction: tx });
+  };
+
   return {
     createProfile,
     updateLinks,
@@ -108,6 +118,7 @@ export const useProfileTransactions = () => {
     viewLinkEvent,
     setTheme,
     deleteProfile,
+    updateTags,
   };
 };
 
