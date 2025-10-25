@@ -15,7 +15,9 @@ import { useProfileTransactions } from "../sui/tx";
 import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
 import { useFirebaseAnalytics } from "../hooks/useAnalytics";
 import { useBlockchainSync } from "../hooks/useBlockchainSync";
-import { updateAnalyticsLinks, initializeAnalytics } from "../firebase/analytics";
+import { updateAnalyticsLinks, initializeAnalytics, incrementLinkClick, getAnalytics } from "../firebase/analytics";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 interface LinkItem {
   label: string;
@@ -51,7 +53,12 @@ const ProfileCard = ({
   const profileId = profile.data?.objectId || "";
   
   // Use Firebase analytics instead of blockchain
-  const { analytics } = useFirebaseAnalytics(profileId);
+  const { analytics, refreshAnalytics } = useFirebaseAnalytics(profileId);
+  
+  // Debug analytics data (reduced logging)
+  if (analytics && analytics.linkClicks) {
+    console.log("Analytics loaded - Link clicks:", analytics.linkClicks);
+  }
   
   // Auto-sync to blockchain every 2 days
   const { isSyncing, performSync } = useBlockchainSync();
@@ -67,6 +74,9 @@ const ProfileCard = ({
     profileData?.tags || []
   );
 
+  // Debug links count (reduced logging)
+  // console.log("Links count:", links.length);
+
   // Update links when profile data changes
   useEffect(() => {
     if (existingLinks.length > 0) {
@@ -74,12 +84,42 @@ const ProfileCard = ({
     }
   }, [JSON.stringify(existingLinks)]);
 
-  // Initialize Firebase analytics if needed
+  // Initialize Firebase analytics if needed (safe initialization)
   useEffect(() => {
-    if (!analytics && profileId && existingLinks.length > 0) {
-      initializeAnalytics(profileId, existingLinks);
+    if (!profileId || existingLinks.length === 0) return;
+    if (!isLoading && analytics === null) {
+      console.log("Initializing analytics for profile:", profileId, "with links:", existingLinks);
+      initializeAnalytics(profileId, existingLinks).then(() => refreshAnalytics());
     }
-  }, [analytics, profileId, existingLinks]);
+  }, [profileId, existingLinks, isLoading, analytics, refreshAnalytics]);
+
+  // Refresh analytics when component becomes visible (user returns from PublicProfile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && profileId) {
+        console.log("Page became visible, refreshing analytics...");
+        refreshAnalytics();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh on focus (when user switches back to tab)
+    const handleFocus = () => {
+      if (profileId) {
+        console.log("Page focused, refreshing analytics...");
+        refreshAnalytics();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [profileId, refreshAnalytics]);
+
 
   const addLink = () => {
     setLinks([...links, { label: "", url: "", icon: "" }]);
@@ -177,10 +217,82 @@ const ProfileCard = ({
           >
             {isLoading ? "Updating..." : "Update Links"}
           </Button>
+          
+          {/* Debug: Test analytics */}
+          <Button
+            size="1"
+            variant="outline"
+            onClick={async () => {
+              console.log("Testing analytics...");
+              try {
+                // Test incrementLinkClick
+                await incrementLinkClick(profileId, 0);
+                console.log("Test click recorded");
+                
+                // Reload analytics
+                const updated = await getAnalytics(profileId);
+                console.log("Updated analytics:", updated);
+                
+                // Force refresh using hook
+                refreshAnalytics();
+              } catch (error) {
+                console.error("Analytics test failed:", error);
+              }
+            }}
+          >
+            Test Analytics
+          </Button>
+          
+          {/* Debug: Test Firebase connection */}
+          <Button
+            size="1"
+            variant="outline"
+            onClick={async () => {
+              console.log("Testing Firebase connection...");
+              try {
+                // Test basic Firebase write
+                const testData = {
+                  test: true,
+                  timestamp: new Date().toISOString(),
+                  profileId: profileId
+                };
+                
+                const testDoc = doc(db, "test", "connection");
+                await setDoc(testDoc, testData);
+                console.log("✅ Firebase write test successful");
+                
+                // Test read
+                const testSnap = await getDoc(testDoc);
+                console.log("✅ Firebase read test successful:", testSnap.data());
+                
+              } catch (error) {
+                console.error("❌ Firebase test failed:", error);
+                console.error("Error details:", {
+                  code: error.code,
+                  message: error.message,
+                  stack: error.stack
+                });
+              }
+            }}
+          >
+            Test Firebase
+          </Button>
+          
+          {/* Manual analytics refresh */}
+          <Button
+            size="1"
+            variant="outline"
+            onClick={() => {
+              console.log("Manually refreshing analytics...");
+              refreshAnalytics();
+            }}
+          >
+            Refresh Analytics
+          </Button>
         </Box>
 
         {/* Analytics Chart - Simple Bar Graph */}
-        {analytics && analytics.linkClicks.length > 0 && (
+        {analytics && (
           <Box>
             <Text size="2" weight="bold" mb="2">
               📊 Link Performance
@@ -192,41 +304,47 @@ const ProfileCard = ({
                 borderRadius: "8px",
               }}
             >
-              {links.map((link, index) => {
-                const clicks = analytics.linkClicks[index] || 0;
-                const maxClicks = Math.max(...analytics.linkClicks, 1);
-                const percentage = (clicks / maxClicks) * 100;
-                
-                return (
-                  <Box key={index} mb="2">
-                    <Flex justify="between" mb="1">
-                      <Text size="1" color="gray">
-                        {link.label || link.url.slice(0, 30)}...
-                      </Text>
-                      <Text size="1" weight="bold">
-                        {clicks} clicks
-                      </Text>
-                    </Flex>
-                    <Box
-                      style={{
-                        height: "8px",
-                        background: "var(--gray-5)",
-                        borderRadius: "4px",
-                        overflow: "hidden",
-                      }}
-                    >
+              {analytics.linkClicks && analytics.linkClicks.length > 0 ? (
+                links.map((link, index) => {
+                  const clicks = analytics.linkClicks[index] || 0;
+                  const maxClicks = Math.max(...analytics.linkClicks, 1);
+                  const percentage = (clicks / maxClicks) * 100;
+                  
+                  return (
+                    <Box key={index} mb="2">
+                      <Flex justify="between" mb="1">
+                        <Text size="1" color="gray">
+                          {link.label || link.url.slice(0, 30)}...
+                        </Text>
+                        <Text size="1" weight="bold">
+                          {clicks} clicks
+                        </Text>
+                      </Flex>
                       <Box
                         style={{
-                          height: "100%",
-                          width: `${percentage}%`,
-                          background: "var(--blue-9)",
-                          transition: "width 0.3s ease",
+                          height: "8px",
+                          background: "var(--gray-5)",
+                          borderRadius: "4px",
+                          overflow: "hidden",
                         }}
-                      />
+                      >
+                        <Box
+                          style={{
+                            height: "100%",
+                            width: `${percentage}%`,
+                            background: "var(--blue-9)",
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </Box>
                     </Box>
-                  </Box>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <Text size="2" color="gray" align="center">
+                  No click data yet. Share your profile to see analytics!
+                </Text>
+              )}
             </Box>
           </Box>
         )}

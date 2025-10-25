@@ -7,6 +7,7 @@ import {
   increment,
   serverTimestamp,
   Timestamp,
+  runTransaction,
 } from "firebase/firestore";
 
 export interface ProfileAnalytics {
@@ -52,7 +53,7 @@ export async function getAnalytics(
 }
 
 /**
- * Initialize analytics for a new profile
+ * Initialize analytics for a profile (idempotent - won't overwrite existing data)
  */
 export async function initializeAnalytics(
   profileId: string,
@@ -60,6 +61,26 @@ export async function initializeAnalytics(
 ): Promise<void> {
   try {
     const docRef = doc(db, "analytics", profileId);
+    const snap = await getDoc(docRef);
+
+    if (snap.exists()) {
+      // Document exists - only update missing fields, preserve existing counts
+      const data = snap.data() || {};
+      const oldClicks: number[] = Array.isArray(data.linkClicks)
+        ? data.linkClicks
+        : [];
+      const mergedClicks = links.map((_, i) => oldClicks[i] ?? 0);
+
+      await updateDoc(docRef, {
+        links,
+        linkClicks: mergedClicks,
+        lastUpdated: serverTimestamp(),
+      });
+      console.log(`Analytics updated for existing profile ${profileId}`);
+      return;
+    }
+
+    // First time setup (document doesn't exist)
     await setDoc(docRef, {
       profileId,
       profileViews: 0,
@@ -69,8 +90,10 @@ export async function initializeAnalytics(
       lastUpdated: serverTimestamp(),
       needsBlockchainSync: false,
     });
+    console.log(`Analytics initialized for new profile ${profileId}`);
   } catch (error) {
     console.error("Error initializing analytics:", error);
+    throw error;
   }
 }
 
@@ -97,7 +120,7 @@ export async function incrementProfileView(profileId: string): Promise<void> {
 }
 
 /**
- * Increment link click count
+ * Increment link click count (atomic with transaction)
  */
 export async function incrementLinkClick(
   profileId: string,
@@ -109,53 +132,47 @@ export async function incrementLinkClick(
     );
 
     const docRef = doc(db, "analytics", profileId);
-    const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
-      console.warn(
-        `Analytics document does not exist for profile ${profileId}, creating...`
-      );
-      // Create a basic analytics document
-      await setDoc(docRef, {
-        profileId,
-        profileViews: 0,
-        linkClicks: new Array(linkIndex + 1).fill(0),
-        links: [],
-        lastSyncedToBlockchain: null,
-        lastUpdated: serverTimestamp(),
-        needsBlockchainSync: false,
-      });
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(docRef);
 
-      // Now increment the click
-      const newLinkClicks = new Array(linkIndex + 1).fill(0);
-      newLinkClicks[linkIndex] = 1;
+      if (!snap.exists()) {
+        // Create new document
+        tx.set(docRef, {
+          profileId,
+          profileViews: 0,
+          linkClicks: new Array(linkIndex + 1)
+            .fill(0)
+            .map((v, i) => (i === linkIndex ? 1 : 0)),
+          links: [],
+          lastSyncedToBlockchain: null,
+          lastUpdated: serverTimestamp(),
+          needsBlockchainSync: true,
+        });
+        console.log(
+          `Created analytics document and incremented click for profile ${profileId}`
+        );
+        return;
+      }
 
-      await updateDoc(docRef, {
-        linkClicks: newLinkClicks,
+      // Update existing document
+      const data = snap.data() || {};
+      const arr: number[] = Array.isArray(data.linkClicks)
+        ? [...data.linkClicks]
+        : [];
+
+      // Ensure array is long enough
+      while (arr.length <= linkIndex) {
+        arr.push(0);
+      }
+
+      arr[linkIndex] += 1;
+
+      tx.update(docRef, {
+        linkClicks: arr,
         lastUpdated: serverTimestamp(),
         needsBlockchainSync: true,
       });
-
-      console.log(
-        `Created analytics document and incremented click for profile ${profileId}`
-      );
-      return;
-    }
-
-    const data = docSnap.data();
-    const linkClicks = data.linkClicks || [];
-
-    // Ensure array is long enough
-    while (linkClicks.length <= linkIndex) {
-      linkClicks.push(0);
-    }
-
-    linkClicks[linkIndex] = (linkClicks[linkIndex] || 0) + 1;
-
-    await updateDoc(docRef, {
-      linkClicks,
-      lastUpdated: serverTimestamp(),
-      needsBlockchainSync: true,
     });
 
     console.log(`Successfully incremented link click for profile ${profileId}`);
