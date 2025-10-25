@@ -163,13 +163,12 @@ export const Dashboard = () => {
   const handleUpdateTags = async (profileId: string) => {
     setIsLoading(true);
     try {
-      // TODO: Contract needs to be re-published with update_tags function
-      alert("⚠️ Tag feature is ready! Please re-publish the Move contract to use this feature on-chain.\n\nFor now, tags are saved locally in your browser.");
-      console.log("Tags to update:", selectedTags);
-      // await updateTags(profileId, selectedTags);
-      // await refetch();
+      await updateTags(profileId, selectedTags);
+      await refetch();
+      alert("✅ Tags updated successfully on blockchain!");
     } catch (error) {
       console.error("Failed to update tags:", error);
+      alert("❌ Failed to update tags: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
