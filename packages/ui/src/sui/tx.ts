@@ -135,7 +135,7 @@ export const useProfileTransactions = () => {
     });
 
     return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+      allowedMoveCallTargets: [`${PKG_ID}::profile::set_theme`],
     });
   };
 
@@ -147,7 +147,7 @@ export const useProfileTransactions = () => {
     });
 
     return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+      allowedMoveCallTargets: [`${PKG_ID}::profile::delete_profile`],
     });
   };
 
@@ -159,7 +159,7 @@ export const useProfileTransactions = () => {
     });
 
     return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+      allowedMoveCallTargets: [`${PKG_ID}::profile::update_tags`],
     });
   };
 
@@ -171,7 +171,7 @@ export const useProfileTransactions = () => {
     });
 
     return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+      allowedMoveCallTargets: [`${PKG_ID}::profile::increment_profile_view`],
     });
   };
 
@@ -183,7 +183,7 @@ export const useProfileTransactions = () => {
     });
 
     return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+      allowedMoveCallTargets: [`${PKG_ID}::profile::view_link`],
     });
   };
 

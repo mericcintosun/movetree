@@ -78,26 +78,7 @@ export const useSimilarProfiles = (userTags: string[], currentProfileId?: string
         // Note: This won't work without knowing all profile addresses
         // For hackathon/demo, we'll use mock data with fallback message
         
-        console.warn(`
-          ⚠️ PRODUCTION NOTICE:
-          To query all profiles by tags, you need:
-          
-          Option 1: Sui GraphQL (Recommended)
-          - Install: npm install @mysten/sui.js
-          - Use GraphQL client to query all LinkTreeProfile objects
-          - Filter by tags in the query
-          
-          Option 2: Custom Indexer
-          - Set up a backend service
-          - Listen to profile creation/update events
-          - Build a searchable database of profiles + tags
-          
-          Option 3: Event-based Discovery
-          - Emit events when profiles are created/updated
-          - Index events and build a tag registry
-          
-          Current: Using mock data for demo purposes
-        `);
+        // Using mock data for similar profiles feature (demo purposes)
 
         // For now, return mock data
         const mockProfiles = [

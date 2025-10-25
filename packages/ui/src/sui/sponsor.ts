@@ -23,7 +23,10 @@ export function useSponsoredExecute() {
       throw new Error("No account connected");
     }
 
-    // 1) Sadece transaction kind byte'larını üret
+    // 1) Sender'ı set et
+    tx.setSender(account.address);
+
+    // 2) Sadece transaction kind byte'larını üret
     const txBytes = await tx.build({
       client,
       onlyTransactionKind: true,
@@ -33,23 +36,26 @@ export function useSponsoredExecute() {
     // 2) Backend'ten sponsor iste
     console.log("🔗 Backend URL:", import.meta.env.VITE_BACKEND_URL);
     console.log("📤 Request data:", {
-      transactionKindBytesB64: transactionKindBytesB64.substring(0, 50) + "...",
+      transactionKindBytes: transactionKindBytesB64.substring(0, 50) + "...",
       sender: account.address,
       allowedMoveCallTargets: opts.allowedMoveCallTargets ?? [],
       allowedAddresses: opts.allowedAddresses ?? [],
     });
+    console.log("🔑 JWT from account:", account.jwt ? "Present" : "Missing");
 
     const resp = await fetch(
       `${import.meta.env.VITE_BACKEND_URL}/api/enoki/sponsor`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "zklogin-jwt": account.jwt || "mock-jwt", // Get real JWT from Enoki wallet
+        },
         body: JSON.stringify({
-          transactionBlockKindBytesB64: transactionKindBytesB64,
+          transactionKindBytes: transactionKindBytesB64,
           sender: account.address,
           allowedMoveCallTargets: opts.allowedMoveCallTargets ?? [],
           allowedAddresses: opts.allowedAddresses ?? [],
-          zkLoginJwt: "mock-jwt", // TODO: Get real JWT from Enoki wallet
         }),
       },
     );
