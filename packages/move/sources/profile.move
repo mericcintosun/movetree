@@ -26,13 +26,28 @@ public struct LinkTreeProfile has key {
     bio: String,
     theme: String,
     links: vector<String>,
-    links_hash: vector<u8>, // NEW
+    links_hash: vector<u8>,
+    tags: vector<String>, // NEW: user interests/categories for networking
 }
 
 /// Event: bir profil için belirli indexte link görüntülendi.
 public struct LinkViewed has copy, drop {
     profile_id: address,
     index: u64,
+}
+
+/// Event: profil oluşturuldu (indexer için)
+public struct ProfileCreated has copy, drop {
+    profile_id: address,
+    owner: address,
+    name: String,
+    tags: vector<String>,
+}
+
+/// Event: profil tag'leri güncellendi (indexer için)
+public struct TagsUpdated has copy, drop {
+    profile_id: address,
+    tags: vector<String>,
 }
 
 public entry fun create_profile(
@@ -50,8 +65,19 @@ public entry fun create_profile(
         bio,
         theme,
         links: vector::empty(),
-        links_hash: vector::empty(), // NEW
+        links_hash: vector::empty(),
+        tags: vector::empty(), // NEW
     };
+    
+    // Emit event for indexer
+    let profile_id = object::uid_to_address(&profile.id);
+    event::emit(ProfileCreated {
+        profile_id,
+        owner: tx_context::sender(ctx),
+        name,
+        tags: vector::empty(),
+    });
+    
     transfer::transfer(profile, tx_context::sender(ctx));
 }
 
@@ -95,6 +121,22 @@ public fun set_theme(profile: &mut LinkTreeProfile, theme: String) {
     profile.theme = theme;
 }
 
+/// Update user's interest tags for networking
+public entry fun update_tags(profile: &mut LinkTreeProfile, tags: vector<String>) {
+    profile.tags = tags;
+    
+    // Emit event for indexer to track tag updates
+    event::emit(TagsUpdated {
+        profile_id: object::uid_to_address(&profile.id),
+        tags,
+    });
+}
+
+/// Get profile tags (read-only)
+public fun get_tags(profile: &LinkTreeProfile): vector<String> {
+    profile.tags
+}
+
 public entry fun delete_profile(profile: LinkTreeProfile) {
     let LinkTreeProfile {
         id,
@@ -105,6 +147,7 @@ public entry fun delete_profile(profile: LinkTreeProfile) {
         theme: _,
         links: _,
         links_hash: _,
+        tags: _, // NEW
     } = profile;
     object::delete(id);
 }
