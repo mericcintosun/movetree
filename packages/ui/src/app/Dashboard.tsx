@@ -12,7 +12,7 @@ import {
 } from "@radix-ui/themes";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useProfileTransactions } from "../sui/tx";
-import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
+import { useOwnedProfiles, useSimilarProfiles, useProfileAnalytics } from "../sui/queries";
 
 interface LinkItem {
   label: string;
@@ -36,9 +36,237 @@ const POPULAR_TAGS = [
   "Entrepreneur",
 ];
 
+// Separate component to avoid hook ordering issues
+const ProfileCard = ({ 
+  profile, 
+  onUpdateLinks, 
+  onUpdateTags, 
+  onDeleteProfile,
+  isLoading 
+}: any) => {
+  const profileData = (profile.data?.content as any)?.fields;
+  const profileId = profile.data?.objectId || "";
+  const analytics = useProfileAnalytics(profileId); // ✅ Hook artık component içinde
+  
+  const [links, setLinks] = useState<LinkItem[]>([
+    { label: "", url: "", icon: "" },
+  ]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(
+    profileData?.tags || []
+  );
+
+  const addLink = () => {
+    setLinks([...links, { label: "", url: "", icon: "" }]);
+  };
+
+  const removeLink = (index: number) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const updateLink = (index: number, field: keyof LinkItem, value: string) => {
+    const newLinks = [...links];
+    newLinks[index][field] = value;
+    setLinks(newLinks);
+  };
+
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  return (
+    <Card>
+      {/* Analytics Badge - GitHub style */}
+      <Flex justify="between" align="center" mb="3">
+        <Heading size="4">
+          {profileData?.name || "Unnamed Profile"}
+        </Heading>
+        <Badge size="2" color="blue" radius="full">
+          👁️ {analytics.profileViews} views
+        </Badge>
+      </Flex>
+
+      <Text size="2" mb="3">
+        {profileData?.bio || "No bio"}
+      </Text>
+
+      <Text size="1" color="gray" mb="3">
+        Object ID: {profileId}
+      </Text>
+
+      <Flex direction="column" gap="3">
+        <Box>
+          <Text size="2" weight="bold" mb="2">
+            Links
+          </Text>
+          {links.map((link, index) => (
+            <Flex key={index} gap="2" mb="2" align="center">
+              <TextField.Root
+                placeholder="Label"
+                value={link.label}
+                onChange={(e: any) =>
+                  updateLink(index, "label", e.target.value)
+                }
+                size="1"
+              />
+              <TextField.Root
+                placeholder="URL"
+                value={link.url}
+                onChange={(e: any) =>
+                  updateLink(index, "url", e.target.value)
+                }
+                size="1"
+              />
+              <TextField.Root
+                placeholder="Icon (optional)"
+                value={link.icon || ""}
+                onChange={(e: any) =>
+                  updateLink(index, "icon", e.target.value)
+                }
+                size="1"
+              />
+              {/* Show click count */}
+              <Badge color="gray" variant="soft">
+                {analytics.linkClicks[index] || 0} clicks
+              </Badge>
+              <Button
+                size="1"
+                color="red"
+                onClick={() => removeLink(index)}
+              >
+                Remove
+              </Button>
+            </Flex>
+          ))}
+          <Button size="1" onClick={addLink} mb="2">
+            Add Link
+          </Button>
+          <Button
+            size="1"
+            onClick={() => onUpdateLinks(profileId, links)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Updating..." : "Update Links"}
+          </Button>
+        </Box>
+
+        {/* Analytics Chart - Simple Bar Graph */}
+        {analytics.linkClicks.length > 0 && (
+          <Box>
+            <Text size="2" weight="bold" mb="2">
+              📊 Link Performance
+            </Text>
+            <Box
+              style={{
+                background: "var(--gray-3)",
+                padding: "12px",
+                borderRadius: "8px",
+              }}
+            >
+              {links.map((link, index) => {
+                const clicks = analytics.linkClicks[index] || 0;
+                const maxClicks = Math.max(...analytics.linkClicks, 1);
+                const percentage = (clicks / maxClicks) * 100;
+                
+                return (
+                  <Box key={index} mb="2">
+                    <Flex justify="between" mb="1">
+                      <Text size="1" color="gray">
+                        {link.label || link.url.slice(0, 30)}...
+                      </Text>
+                      <Text size="1" weight="bold">
+                        {clicks} clicks
+                      </Text>
+                    </Flex>
+                    <Box
+                      style={{
+                        height: "8px",
+                        background: "var(--gray-5)",
+                        borderRadius: "4px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box
+                        style={{
+                          height: "100%",
+                          width: `${percentage}%`,
+                          background: "var(--blue-9)",
+                          transition: "width 0.3s ease",
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
+
+        <Box>
+          <Text size="2" weight="bold" mb="2">
+            Interest Tags (for networking)
+          </Text>
+          
+          {/* Selected tags display */}
+          {selectedTags.length > 0 && (
+            <Flex gap="2" wrap="wrap" mb="3">
+              {selectedTags.map((tag) => (
+                <Badge key={tag} size="2" color="blue">
+                  {tag}
+                </Badge>
+              ))}
+            </Flex>
+          )}
+
+          {/* Available tags */}
+          <Text size="1" color="gray" mb="1">
+            Select your interests (click to toggle):
+          </Text>
+          <Flex gap="1" wrap="wrap" mb="3">
+            {POPULAR_TAGS.map((tag) => (
+              <Badge
+                key={tag}
+                size="1"
+                color={selectedTags.includes(tag) ? "green" : "gray"}
+                onClick={() => toggleTag(tag)}
+                style={{ cursor: "pointer" }}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </Flex>
+
+          <Button
+            size="1"
+            onClick={() => onUpdateTags(profileId, selectedTags)}
+            disabled={isLoading}
+            color="purple"
+          >
+            Update Tags
+          </Button>
+        </Box>
+
+        <Box>
+          <Button
+            size="1"
+            color="red"
+            onClick={() => onDeleteProfile(profileId)}
+            disabled={isLoading}
+          >
+            {isLoading ? "Deleting..." : "Delete Profile"}
+          </Button>
+        </Box>
+      </Flex>
+    </Card>
+  );
+};
+
 export const Dashboard = () => {
   const account = useCurrentAccount();
-  const { createProfile, updateLinks, updateLinksVerified, setTheme, deleteProfile, updateTags } =
+  const { createProfile, updateLinks, updateTags, deleteProfile } =
     useProfileTransactions();
   const { data: profiles, refetch } = useOwnedProfiles(account?.address || "");
 
@@ -49,8 +277,6 @@ export const Dashboard = () => {
     theme: "dark",
   });
 
-  const [links, setLinks] = useState<LinkItem[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Get current profile's tags for similarity matching
@@ -84,37 +310,29 @@ export const Dashboard = () => {
     }
   };
 
-  const handleUpdateLinks = async (profileId: string) => {
+  const handleUpdateLinks = async (profileId: string, links: LinkItem[]) => {
     setIsLoading(true);
     try {
       await updateLinks(profileId, links);
       await refetch();
+      alert("✅ Links updated successfully!");
     } catch (error) {
       console.error("Failed to update links:", error);
+      alert("❌ Failed to update links: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateLinksVerified = async (profileId: string) => {
+  const handleUpdateTags = async (profileId: string, tags: string[]) => {
     setIsLoading(true);
     try {
-      await updateLinksVerified(profileId, links);
+      await updateTags(profileId, tags);
       await refetch();
+      alert("✅ Tags updated successfully on blockchain!");
     } catch (error) {
-      console.error("Failed to update verified links:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpdateTheme = async (profileId: string) => {
-    setIsLoading(true);
-    try {
-      await setTheme(profileId, formData.theme);
-      await refetch();
-    } catch (error) {
-      console.error("Failed to update theme:", error);
+      console.error("Failed to update tags:", error);
+      alert("❌ Failed to update tags: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -135,40 +353,6 @@ export const Dashboard = () => {
       await refetch();
     } catch (error) {
       console.error("Failed to delete profile:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const addLink = () => {
-    setLinks([...links, { label: "", url: "", icon: "" }]);
-  };
-
-  const updateLink = (index: number, field: keyof LinkItem, value: string) => {
-    const newLinks = [...links];
-    newLinks[index] = { ...newLinks[index], [field]: value };
-    setLinks(newLinks);
-  };
-
-  const removeLink = (index: number) => {
-    setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const handleUpdateTags = async (profileId: string) => {
-    setIsLoading(true);
-    try {
-      await updateTags(profileId, selectedTags);
-      await refetch();
-      alert("✅ Tags updated successfully on blockchain!");
-    } catch (error) {
-      console.error("Failed to update tags:", error);
-      alert("❌ Failed to update tags: " + (error as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -252,173 +436,16 @@ export const Dashboard = () => {
         </Card>
       ) : (
         <Flex direction="column" gap="4">
-          {profiles?.data?.map((profile) => {
-            const profileData = (profile.data?.content as any)?.fields;
-            return (
-              <Card key={profile.data?.objectId}>
-                <Heading size="4" mb="3">
-                  {profileData?.name || "Unnamed Profile"}
-                </Heading>
-
-                <Text size="2" mb="3">
-                  {profileData?.bio || "No bio"}
-                </Text>
-
-                <Text size="1" color="gray" mb="3">
-                  Object ID: {profile.data?.objectId}
-                </Text>
-
-                <Flex direction="column" gap="3">
-                  <Box>
-                    <Text size="2" weight="bold" mb="2">
-                      Links
-                    </Text>
-                    {links.map((link, index) => (
-                      <Flex key={index} gap="2" mb="2">
-                        <TextField.Root
-                          placeholder="Label"
-                          value={link.label}
-                          onChange={(e: any) =>
-                            updateLink(index, "label", e.target.value)
-                          }
-                          size="1"
-                        />
-                        <TextField.Root
-                          placeholder="URL"
-                          value={link.url}
-                          onChange={(e: any) =>
-                            updateLink(index, "url", e.target.value)
-                          }
-                          size="1"
-                        />
-                        <TextField.Root
-                          placeholder="Icon (optional)"
-                          value={link.icon || ""}
-                          onChange={(e: any) =>
-                            updateLink(index, "icon", e.target.value)
-                          }
-                          size="1"
-                        />
-                        <Button
-                          size="1"
-                          color="red"
-                          onClick={() => removeLink(index)}
-                        >
-                          Remove
-                        </Button>
-                      </Flex>
-                    ))}
-                    <Button size="1" onClick={addLink} mb="2">
-                      Add Link
-                    </Button>
-                    <Button
-                      size="1"
-                      onClick={() =>
-                        handleUpdateLinks(profile.data?.objectId || "")
-                      }
-                      disabled={isLoading}
-                    >
-                      Update Links
-                    </Button>
-                    <Button
-                      size="1"
-                      onClick={() =>
-                        handleUpdateLinksVerified(profile.data?.objectId || "")
-                      }
-                      disabled={isLoading}
-                      color="green"
-                    >
-                      Update Verified Links
-                    </Button>
-                  </Box>
-
-                  <Box>
-                    <Text size="2" weight="bold" mb="1">
-                      Theme
-                    </Text>
-                    <Flex gap="2">
-                      <TextField.Root
-                        value={formData.theme}
-                        onChange={(e: any) =>
-                          setFormData({ ...formData, theme: e.target.value })
-                        }
-                        placeholder="Theme"
-                        size="1"
-                      />
-                      <Button
-                        size="1"
-                        onClick={() =>
-                          handleUpdateTheme(profile.data?.objectId || "")
-                        }
-                        disabled={isLoading}
-                      >
-                        Update Theme
-                      </Button>
-                    </Flex>
-                  </Box>
-
-                  <Box>
-                    <Text size="2" weight="bold" mb="2">
-                      Interest Tags (for networking)
-                    </Text>
-                    
-                    {/* Selected tags display */}
-                    {selectedTags.length > 0 && (
-                      <Flex gap="2" wrap="wrap" mb="3">
-                        {selectedTags.map((tag) => (
-                          <Badge key={tag} size="2" color="blue">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </Flex>
-                    )}
-
-                    {/* Available tags */}
-                    <Text size="1" color="gray" mb="1">
-                      Select your interests (click to toggle):
-                    </Text>
-                    <Flex gap="1" wrap="wrap" mb="3">
-                      {POPULAR_TAGS.map((tag) => (
-                        <Badge
-                          key={tag}
-                          size="1"
-                          color={selectedTags.includes(tag) ? "green" : "gray"}
-                          onClick={() => toggleTag(tag)}
-                          style={{ cursor: "pointer" }}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </Flex>
-
-                    <Button
-                      size="1"
-                      onClick={() =>
-                        handleUpdateTags(profile.data?.objectId || "")
-                      }
-                      disabled={isLoading}
-                      color="purple"
-                    >
-                      Update Tags
-                    </Button>
-                  </Box>
-
-                  <Box>
-                    <Button
-                      size="1"
-                      color="red"
-                      onClick={() =>
-                        handleDeleteProfile(profile.data?.objectId || "")
-                      }
-                      disabled={isLoading}
-                    >
-                      Delete Profile
-                    </Button>
-                  </Box>
-                </Flex>
-              </Card>
-            );
-          })}
+          {profiles?.data?.map((profile) => (
+            <ProfileCard
+              key={profile.data?.objectId}
+              profile={profile}
+              onUpdateLinks={handleUpdateLinks}
+              onUpdateTags={handleUpdateTags}
+              onDeleteProfile={handleDeleteProfile}
+              isLoading={isLoading}
+            />
+          ))}
         </Flex>
       )}
 

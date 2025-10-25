@@ -115,6 +115,26 @@ export const useProfileTransactions = () => {
     return await signAndExecuteTransaction({ transaction: tx });
   };
 
+  const incrementProfileView = async (profileId: string) => {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::increment_profile_view`,
+      arguments: [tx.object(profileId)],
+    });
+
+    return await signAndExecuteTransaction({ transaction: tx });
+  };
+
+  const trackLinkClick = async (profileId: string, linkIndex: number) => {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::view_link`,
+      arguments: [tx.object(profileId), tx.pure.u64(linkIndex)],
+    });
+
+    return await signAndExecuteTransaction({ transaction: tx });
+  };
+
   return {
     createProfile,
     updateLinks,
@@ -123,5 +143,7 @@ export const useProfileTransactions = () => {
     setTheme,
     deleteProfile,
     updateTags,
+    incrementProfileView,
+    trackLinkClick,
   };
 };
