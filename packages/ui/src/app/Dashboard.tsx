@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -24,6 +24,10 @@ export const Dashboard = () => {
   const { createProfile, updateLinks, updateLinksVerified, setTheme, deleteProfile } =
     useProfileTransactions();
   const { data: profiles, refetch } = useOwnedProfiles(account?.address || "");
+
+  console.log("Dashboard - account:", account);
+  console.log("Dashboard - profiles:", profiles);
+  console.log("Dashboard - account address:", account?.address);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -204,7 +208,7 @@ export const Dashboard = () => {
       ) : (
         <Flex direction="column" gap="4">
           {profiles?.data?.map((profile) => {
-            const profileData = profile.data?.content?.fields;
+            const profileData = (profile.data?.content as any)?.fields;
             return (
               <Card key={profile.data?.objectId}>
                 <Heading size="4" mb="3">
@@ -279,7 +283,7 @@ export const Dashboard = () => {
                       disabled={isLoading}
                       color="green"
                     >
-                      Update Verified Links
+                      Update Verified Links (Hash)
                     </Button>
                   </Box>
 

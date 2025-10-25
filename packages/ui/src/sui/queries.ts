@@ -26,5 +26,7 @@ export const useOwnedProfiles = (address: string) => {
       showStorageRebate: true,
       showType: true,
     },
+  }, {
+    enabled: !!address, // Sadece address varsa query çalıştır
   });
 };

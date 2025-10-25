@@ -3,15 +3,19 @@ import { ConnectButton } from "@mysten/dapp-kit";
 import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
 import { Dashboard } from "./app/Dashboard";
 import { PublicProfile } from "./public/PublicProfile";
+import { LoginButtons } from "./auth/LoginButtons";
+import { RegisterEnokiWallets } from "./sui/RegisterEnokiWallets";
 
 function App() {
   const [currentView, setCurrentView] = useState<"dashboard" | "profile">(
     "dashboard",
   );
   const [profileObjectId, setProfileObjectId] = useState("");
+  console.log("google client id", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
     <>
+      <RegisterEnokiWallets />
       <Flex
         position="sticky"
         px="4"
@@ -38,6 +42,7 @@ function App() {
           >
             View Profile
           </Button>
+          <LoginButtons />
           <ConnectButton />
         </Flex>
       </Flex>

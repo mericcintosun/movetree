@@ -2,6 +2,7 @@ import { Transaction } from "@mysten/sui/transactions";
 import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { bcs } from "@mysten/sui/bcs";
 import { sha3_256 } from "@noble/hashes/sha3.js";
+import { useSponsor } from "./sponsor";
 
 export const useProfileTransactions = () => {
   const { mutateAsync: signAndExecuteTransaction } =
@@ -49,19 +50,11 @@ export const useProfileTransactions = () => {
     profileId: string,
     links: Array<{ label: string; url: string; icon?: string }>
   ) => {
-    const urls = links.map((l) => l.url);
+    const urls = links.map((l) => l.url).filter(Boolean);
 
     // BCS(urls) - SerializedBcs objesi döndürür
-    const urlsBytesRaw = bcs.vector(bcs.string()).serialize(urls);
-    console.log("urlsBytesRaw:", urlsBytesRaw, Object.keys(urlsBytesRaw));
-    
-    // SerializedBcs'den Uint8Array'e çevir
-    const urlsBytes: Uint8Array = urlsBytesRaw.toBytes();
-    console.log("urlsBytes type:", urlsBytes, urlsBytes instanceof Uint8Array);
-    
-    // SHA3-256 over BCS(urls) - Uint8Array
-    const hashBytes = sha3_256(urlsBytes);
-    console.log("hashBytes:", hashBytes);
+    const urlsBytes = bcs.vector(bcs.string()).serialize(urls).toBytes(); // <-- toBytes()
+    const hashBytes = sha3_256(urlsBytes); // Uint8Array(32)
 
     const tx = new Transaction();
     tx.moveCall({
@@ -80,7 +73,10 @@ export const useProfileTransactions = () => {
     const tx = new Transaction();
     tx.moveCall({
       target: `${import.meta.env.VITE_PACKAGE_ID}::profile::view_link`,
-      arguments: [tx.pure.address(profileId), tx.pure.u64(index)],
+      arguments: [
+        tx.object(profileId),        // <-- address DEĞİL, object()
+        tx.pure.u64(index),
+      ],
     });
     return signAndExecuteTransaction({ transaction: tx });
   };
@@ -114,3 +110,21 @@ export const useProfileTransactions = () => {
     deleteProfile,
   };
 };
+
+/**
+ * Sponsored view link - zkLogin kullanıcılar için
+ * Bu fonksiyon cüzdan gerektirmez, backend sponsor eder
+ */
+export function useViewLinkSponsored() {
+  const sponsorAndExecute = useSponsor();
+
+  return async function viewLinkSponsored(pkgId: string, profileId: string, index: number, sender: string) {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${pkgId}::profile::view_link`,
+      arguments: [tx.object(profileId), tx.pure.u64(index)],
+    });
+
+    return sponsorAndExecute(tx, sender);
+  };
+}

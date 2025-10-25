@@ -33,6 +33,7 @@ public struct LinkTreeProfile has key {
 public struct LinkViewed has copy, drop {
     profile_id: address,
     index: u64,
+    viewer: address,
 }
 
 public entry fun create_profile(
@@ -74,8 +75,9 @@ public entry fun upsert_links_verified(
 }
 
 /// Herkes çağırabilir: sadece event basar (profil okunmasına gerek yok).
-public entry fun view_link(profile_id: address, index: u64, _ctx: &mut TxContext) {
-    let ev = LinkViewed { profile_id, index };
+public entry fun view_link(profile_id: address, index: u64, ctx: &mut TxContext) {
+    let viewer = tx_context::sender(ctx);
+    let ev = LinkViewed { profile_id, index, viewer };
     event::emit(ev);
 }
 
