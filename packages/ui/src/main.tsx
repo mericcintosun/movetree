@@ -6,7 +6,9 @@ import "@radix-ui/themes/styles.css";
 import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Theme } from "@radix-ui/themes";
+import { EnokiFlowProvider } from "@mysten/enoki/react";
 import App from "./App.tsx";
+import { enokiFlowConfig } from "./enoki";
 
 const queryClient = new QueryClient();
 
@@ -18,11 +20,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Theme appearance="dark">
       <QueryClientProvider client={queryClient}>
-        <SuiClientProvider networks={networks} defaultNetwork="testnet">
-          <WalletProvider autoConnect>
-            <App />
-          </WalletProvider>
-        </SuiClientProvider>
+        <EnokiFlowProvider {...enokiFlowConfig}>
+          <SuiClientProvider networks={networks} defaultNetwork="testnet">
+            <WalletProvider autoConnect>
+              <App />
+            </WalletProvider>
+          </SuiClientProvider>
+        </EnokiFlowProvider>
       </QueryClientProvider>
     </Theme>
   </React.StrictMode>,
