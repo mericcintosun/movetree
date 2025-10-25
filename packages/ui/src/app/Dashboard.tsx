@@ -314,14 +314,21 @@ const ProfileCard = ({
 };
 
 export const Dashboard = () => {
+  // 1) TÜM hook'lar en üste - erken return'den önce!
   const account = useCurrentAccount();
   const { createProfile, updateLinks, updateTags, deleteProfile } =
     useProfileTransactions();
-  const { data: profiles, refetch } = useOwnedProfiles(account?.address || "");
+  const { data: profiles, refetch, isLoading: profilesLoading, error: profilesError } = useOwnedProfiles(account?.address || "");
 
-  console.log("Dashboard - account:", account);
-  console.log("Dashboard - profiles:", profiles);
-  console.log("Dashboard - account address:", account?.address);
+  // ⬇️ BURAYI YUKARI TAŞIYORUZ (erken return'den önce!)
+  const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoadingTimeout(true);
+    }, 1500); // 1.5 seconds timeout - çok hızlı
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -332,12 +339,19 @@ export const Dashboard = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  console.log("Dashboard - account:", account);
+  console.log("Dashboard - profiles:", profiles);
+  console.log("Dashboard - profilesLoading:", profilesLoading);
+  console.log("Dashboard - profilesError:", profilesError);
+  console.log("Dashboard - account address:", account?.address);
+  console.log("Dashboard - VITE_PACKAGE_ID:", import.meta.env.VITE_PACKAGE_ID);
+
   // Get current profile's tags for similarity matching
   const currentProfileData = profiles?.data?.[0]?.data?.content as any;
   const currentProfileTags = currentProfileData?.fields?.tags || [];
   const currentProfileId = profiles?.data?.[0]?.data?.objectId;
 
-  // Get similar profiles
+  // Get similar profiles - hook'lar erken return'den önce!
   const { data: similarProfiles, refetch: refetchSimilarProfiles } = useSimilarProfiles(
     currentProfileTags,
     currentProfileId
@@ -426,6 +440,7 @@ export const Dashboard = () => {
 
 
 
+  // 2) Erken return şimdi hook'lardan SONRA geliyor → güvenli
   if (!account) {
     return (
       <Box p="4">
@@ -434,11 +449,55 @@ export const Dashboard = () => {
     );
   }
 
+  if (profilesLoading && !showLoadingTimeout) {
+    return (
+      <Box p="4">
+        <Heading mb="4">LinkTree Dashboard</Heading>
+        <Text>Loading your profiles...</Text>
+      </Box>
+    );
+  }
+
+  // If no package ID is set, show a warning
+  if (!import.meta.env.VITE_PACKAGE_ID) {
+    return (
+      <Box p="4">
+        <Heading mb="4">LinkTree Dashboard</Heading>
+        <Text color="red">
+          ⚠️ VITE_PACKAGE_ID environment variable is not set. Please configure it in your .env.local file.
+        </Text>
+      </Box>
+    );
+  }
+
   return (
     <Box p="4">
       <Heading mb="4">LinkTree Dashboard</Heading>
 
-      {profiles?.data?.length === 0 ? (
+      {(() => {
+        console.log("Render condition check:");
+        console.log("- profiles:", profiles);
+        console.log("- profiles.data:", profiles?.data);
+        console.log("- profiles.data.length:", profiles?.data?.length);
+        console.log("- profilesLoading:", profilesLoading);
+        console.log("- showLoadingTimeout:", showLoadingTimeout);
+        
+        // If loading timeout reached, show form regardless
+        if (showLoadingTimeout) {
+          console.log("- condition result (timeout): true - showing form");
+          return true;
+        }
+        
+        // If query error, show form
+        if (profilesError) {
+          console.log("- condition result (error): true - showing form");
+          return true;
+        }
+        
+        const result = !profiles?.data || profiles.data.length === 0;
+        console.log("- condition result:", result);
+        return result;
+      })() ? (
         <Card>
           <Heading size="4" mb="4">
             Create Your Profile

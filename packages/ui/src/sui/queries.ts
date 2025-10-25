@@ -16,10 +16,17 @@ export const useProfile = (objectId: string) => {
 };
 
 export const useOwnedProfiles = (address: string) => {
+  const packageId = import.meta.env.VITE_PACKAGE_ID;
+  const structType = `${packageId}::profile::LinkTreeProfile`;
+  
+  console.log("useOwnedProfiles - address:", address);
+  console.log("useOwnedProfiles - packageId:", packageId);
+  console.log("useOwnedProfiles - structType:", structType);
+  
   return useSuiClientQuery("getOwnedObjects", {
     owner: address,
     filter: {
-      StructType: `${import.meta.env.VITE_PACKAGE_ID}::profile::LinkTreeProfile`,
+      StructType: structType,
     },
     options: {
       showContent: true,
@@ -29,7 +36,10 @@ export const useOwnedProfiles = (address: string) => {
       showType: true,
     },
   }, {
-    enabled: !!address, // Sadece address varsa query çalıştır
+    enabled: !!address && !!packageId, // Sadece address ve packageId varsa query çalıştır
+    retry: 1, // Sadece 1 kez retry
+    retryDelay: 1000, // 1 saniye bekle
+    staleTime: 30000, // 30 saniye cache
   });
 };
 
