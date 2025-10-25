@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Card, Flex, Heading, Text, Button } from "@radix-ui/themes";
 import { useProfile } from "../sui/queries";
+import { useProfileTransactions } from "../sui/tx";
 
 interface PublicProfileProps {
   objectId: string;
@@ -8,6 +9,8 @@ interface PublicProfileProps {
 
 export const PublicProfile = ({ objectId }: PublicProfileProps) => {
   const { data: profile, isLoading, error } = useProfile(objectId);
+  const { viewLinkEvent } = useProfileTransactions();
+  const [clickingIndex, setClickingIndex] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -25,10 +28,24 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
     );
   }
 
-  const profileData = profile.data.content.fields as any;
+  const profileData = (profile.data.content as any).fields;
   const links = (profileData.links || []).filter(
     (url: string) => url && url.trim() !== "",
   );
+
+  const handleLinkClick = async (url: string, index: number) => {
+    setClickingIndex(index);
+    try {
+      // Record view event on blockchain
+      await viewLinkEvent(objectId, index);
+    } catch (error) {
+      console.warn("Failed to record view event:", error);
+    } finally {
+      // Open link regardless of blockchain success
+      window.open(url, "_blank", "noopener,noreferrer");
+      setClickingIndex(null);
+    }
+  };
 
   console.log("Profile data:", profileData);
   console.log("Links:", links);
@@ -72,9 +89,10 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
                   key={index}
                   size="3"
                   style={{ width: "100%" }}
-                  onClick={() => window.open(url, "_blank")}
+                  onClick={() => handleLinkClick(url, index)}
+                  disabled={clickingIndex === index}
                 >
-                  {url}
+                  {clickingIndex === index ? "Recording view..." : url}
                 </Button>
               ))
             ) : (

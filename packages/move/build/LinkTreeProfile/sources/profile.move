@@ -1,19 +1,24 @@
-module linktree::profile {
+module linktree::profile;
 
 use std::option::Option;
 use std::string::String;
 use std::vector;
+use std::bcs;                    // BCS serialize
+use std::hash;                   // sha3_256
+use sui::event;                  // emit<T: copy + drop>
 use sui::object::{Self, UID};
 use sui::transfer;
 use sui::tx_context::{Self, TxContext};
 
-struct LinkItem has copy, drop, store {
+const E_HASH_MISMATCH: u64 = 1;
+
+public struct LinkItem has copy, drop, store {
     label: String,
     url: String,
     icon: Option<String>,
 }
 
-struct LinkTreeProfile has key {
+public struct LinkTreeProfile has key {
     id: UID,
     owner: address,
     name: String,
@@ -21,6 +26,13 @@ struct LinkTreeProfile has key {
     bio: String,
     theme: String,
     links: vector<String>,
+    links_hash: vector<u8>,      // NEW
+}
+
+/// Event: bir profil için belirli indexte link görüntülendi.
+public struct LinkViewed has copy, drop {
+    profile_id: address,
+    index: u64,
 }
 
 public entry fun create_profile(
@@ -38,12 +50,49 @@ public entry fun create_profile(
         bio,
         theme,
         links: vector::empty(),
+        links_hash: vector::empty(),     // NEW
     };
     transfer::transfer(profile, tx_context::sender(ctx));
 }
 
 public fun upsert_links(profile: &mut LinkTreeProfile, urls: vector<String>) {
     profile.links = urls;
+}
+
+/// Sahip tarafında: links + hash güncelle (hash doğrulanır).
+public entry fun upsert_links_verified(
+    profile: &mut LinkTreeProfile,
+    urls: vector<String>,
+    hash_arg: vector<u8>,
+) {
+    let bytes = bcs::to_bytes(&urls);
+    let computed = hash::sha3_256(bytes);
+    assert!(eq_bytes(&computed, &hash_arg), E_HASH_MISMATCH);
+
+    profile.links = urls;
+    profile.links_hash = computed;
+}
+
+/// Herkes çağırabilir: sadece event basar (profil okunmasına gerek yok).
+public entry fun view_link(
+    profile_id: address,
+    index: u64,
+    _ctx: &mut TxContext,
+) {
+    let ev = LinkViewed { profile_id, index };
+    event::emit(ev);
+}
+
+fun eq_bytes(a: &vector<u8>, b: &vector<u8>): bool {
+    let la = vector::length(a);
+    let lb = vector::length(b);
+    if (la != lb) { return false };
+    let mut i = 0;
+    while (i < la) {
+        if (*vector::borrow(a, i) != *vector::borrow(b, i)) { return false };
+        i = i + 1;
+    };
+    true
 }
 
 public fun set_theme(profile: &mut LinkTreeProfile, theme: String) {
@@ -59,7 +108,7 @@ public entry fun delete_profile(profile: LinkTreeProfile) {
         bio: _,
         theme: _,
         links: _,
+        links_hash: _,
     } = profile;
     object::delete(id);
-}
 }

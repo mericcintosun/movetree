@@ -21,7 +21,7 @@ interface LinkItem {
 
 export const Dashboard = () => {
   const account = useCurrentAccount();
-  const { createProfile, updateLinks, setTheme, deleteProfile } =
+  const { createProfile, updateLinks, updateLinksVerified, setTheme, deleteProfile } =
     useProfileTransactions();
   const { data: profiles, refetch } = useOwnedProfiles(account?.address || "");
 
@@ -62,6 +62,18 @@ export const Dashboard = () => {
       await refetch();
     } catch (error) {
       console.error("Failed to update links:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateLinksVerified = async (profileId: string) => {
+    setIsLoading(true);
+    try {
+      await updateLinksVerified(profileId, links);
+      await refetch();
+    } catch (error) {
+      console.error("Failed to update verified links:", error);
     } finally {
       setIsLoading(false);
     }
@@ -258,6 +270,16 @@ export const Dashboard = () => {
                       disabled={isLoading}
                     >
                       Update Links
+                    </Button>
+                    <Button
+                      size="1"
+                      onClick={() =>
+                        handleUpdateLinksVerified(profile.data?.objectId || "")
+                      }
+                      disabled={isLoading}
+                      color="green"
+                    >
+                      Update Verified Links
                     </Button>
                   </Box>
 
