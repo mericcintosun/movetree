@@ -1,0 +1,191 @@
+name: Walrus CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "18"
+  SUI_NETWORK: "testnet"
+
+jobs:
+  # Build and test the UI package
+  build-ui:
+    name: Build UI Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: packages/ui/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd packages/ui
+          npm ci
+
+      - name: Run linting
+        run: |
+          cd packages/ui
+          npm run lint
+
+      - name: Run type checking
+        run: |
+          cd packages/ui
+          npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-build
+          path: packages/ui/dist/
+          retention-days: 7
+
+  # Test Sui Move package
+  test-move:
+    name: Test Move Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Sui CLI
+        run: |
+          curl -fsSL https://get.sui.io | sh
+          echo "$HOME/.sui/bin" >> $GITHUB_PATH
+
+      - name: Test Move package
+        run: |
+          cd packages/move
+          sui move test
+
+      - name: Build Move package
+        run: |
+          cd packages/move
+          sui move build
+
+  # Deploy to Walrus (only on main branch)
+  deploy-walrus:
+    name: Deploy to Walrus
+    runs-on: ubuntu-latest
+    needs: [build-ui, test-move]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-build
+          path: packages/ui/dist/
+
+      - name: Install script dependencies
+        run: |
+          npm install -g tsx
+          npm install js-yaml @types/js-yaml
+
+      - name: Deploy to Walrus
+        env:
+          WALRUS_API_KEY: ${{ secrets.WALRUS_API_KEY }}
+          WALRUS_API_URL: ${{ secrets.WALRUS_API_URL }}
+        run: |
+          tsx scripts/publish-walrus.ts
+
+      - name: Update deployment status
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully"
+          echo "🌐 Site URLs:"
+          echo "  - Testnet: https://movetree-testnet.walrus.gg"
+          echo "  - Mainnet: https://movetree-mainnet.walrus.gg"
+
+  # Link to SuiNS domains (optional)
+  link-suins:
+    name: Link to SuiNS
+    runs-on: ubuntu-latest
+    needs: [deploy-walrus]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install script dependencies
+        run: |
+          npm install -g tsx
+          npm install @mysten/sui.js
+
+      - name: Link to SuiNS domains
+        env:
+          SUI_PRIVATE_KEY: ${{ secrets.SUI_PRIVATE_KEY }}
+          SUI_RPC_URL: ${{ secrets.SUI_RPC_URL }}
+        run: |
+          tsx scripts/link-suins.ts link movetree-test https://movetree-testnet.walrus.gg
+          tsx scripts/link-suins.ts link movetree https://movetree-mainnet.walrus.gg
+
+  # Security scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  # Notify deployment status
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-walrus, link-suins]
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.deploy-walrus.result == 'success'
+        run: |
+          echo "🎉 MoveTree deployed successfully!"
+          echo "📊 Deployment Summary:"
+          echo "  - UI Package: ✅ Built and deployed"
+          echo "  - Move Package: ✅ Tested and built"
+          echo "  - Walrus Sites: ✅ Deployed"
+          echo "  - SuiNS Links: ${{ needs.link-suins.result == 'success' && '✅' || '⚠️' }}"
+
+      - name: Notify failure
+        if: needs.deploy-walrus.result == 'failure'
+        run: |
+          echo "❌ MoveTree deployment failed!"
+          echo "Please check the logs for details."

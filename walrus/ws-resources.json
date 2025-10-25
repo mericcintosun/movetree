@@ -1,0 +1,46 @@
+{
+  "sites": [
+    {
+      "id": "movetree-testnet",
+      "name": "MoveTree Testnet",
+      "url": "https://movetree-testnet.walrus.gg",
+      "network": "testnet",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "status": "active",
+      "resources": {
+        "blob_references": [
+          {
+            "id": "profile-avatar-1",
+            "type": "image",
+            "url": "https://blob.walrus.gg/avatar-1.png",
+            "size_bytes": 102400
+          },
+          {
+            "id": "profile-banner-1",
+            "type": "image",
+            "url": "https://blob.walrus.gg/banner-1.png",
+            "size_bytes": 204800
+          }
+        ],
+        "site_objects": [
+          {
+            "id": "site-config",
+            "type": "configuration",
+            "data": {
+              "theme": "dark",
+              "layout": "modern",
+              "features": ["analytics", "custom_domain"]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2024-01-01T00:00:00Z",
+    "total_sites": 1,
+    "total_storage_mb": 0.3
+  }
+}
