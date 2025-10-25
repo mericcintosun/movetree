@@ -1,0 +1,19 @@
+{
+  "name": "@movetree/backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@mysten/enoki": "^0.12.8",
+    "@mysten/sui": "^1.43.1",
+    "@types/cors": "^2.8.19",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "tsx": "^4.7.0"
+  }
+}

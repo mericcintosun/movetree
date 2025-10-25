@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_SUI_NETWORK: string;
   readonly VITE_ENOKI_PUBLIC_KEY: string;
   readonly VITE_GOOGLE_CLIENT_ID: string;
+  readonly VITE_ENOKI_NETWORK: string;
+  readonly VITE_BACKEND_URL: string;
 }
 
 interface ImportMeta {

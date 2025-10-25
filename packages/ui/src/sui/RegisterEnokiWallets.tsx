@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useSuiClientContext } from "@mysten/dapp-kit";
 import { EnokiNetwork, registerEnokiWallets } from "@mysten/enoki";
-
 export function RegisterEnokiWallets() {
   const { client, network } = useSuiClientContext();
 
@@ -17,7 +16,7 @@ export function RegisterEnokiWallets() {
             "453473344189-dq28epkd2qdpumsl963fr6i5vcgqe9m4.apps.googleusercontent.com",
         },
       },
-      client: client as any,
+      client: client as unknown as SuiClient,
       network: (network as EnokiNetwork) ?? "testnet",
     });
     return unregister;

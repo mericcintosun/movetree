@@ -320,15 +320,7 @@ export const Dashboard = () => {
     useProfileTransactions();
   const { data: profiles, refetch, isLoading: profilesLoading, error: profilesError } = useOwnedProfiles(account?.address || "");
 
-  // ⬇️ BURAYI YUKARI TAŞIYORUZ (erken return'den önce!)
-  const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowLoadingTimeout(true);
-    }, 1500); // 1.5 seconds timeout - çok hızlı
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Loading timeout removed - not needed anymore
 
   const [formData, setFormData] = useState({
     name: "",
@@ -339,12 +331,7 @@ export const Dashboard = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  console.log("Dashboard - account:", account);
-  console.log("Dashboard - profiles:", profiles);
-  console.log("Dashboard - profilesLoading:", profilesLoading);
-  console.log("Dashboard - profilesError:", profilesError);
-  console.log("Dashboard - account address:", account?.address);
-  console.log("Dashboard - VITE_PACKAGE_ID:", import.meta.env.VITE_PACKAGE_ID);
+  // Debug logs removed for cleaner console
 
   // Get current profile's tags for similarity matching
   const currentProfileData = profiles?.data?.[0]?.data?.content as any;
@@ -358,8 +345,17 @@ export const Dashboard = () => {
   );
 
   const handleCreateProfile = async () => {
-    if (!account) return;
+    if (!account) {
+      alert("Please connect your wallet first");
+      return;
+    }
 
+    // Form validation
+    if (!formData.name.trim()) {
+      alert("Please enter a name");
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await createProfile(
@@ -369,9 +365,11 @@ export const Dashboard = () => {
         formData.theme,
       );
       await refetch();
-      setFormData({ name: "", avatarCid: "", bio: "", theme: "dark" });
+      // Don't clear form - let user see the created profile
+      alert("Profile created successfully!");
     } catch (error) {
       console.error("Failed to create profile:", error);
+      alert(`Profile creation failed: ${error.message || error}`);
     } finally {
       setIsLoading(false);
     }
@@ -380,7 +378,7 @@ export const Dashboard = () => {
   const handleUpdateLinks = async (profileId: string, links: LinkItem[]) => {
     setIsLoading(true);
     try {
-      console.log('Updating links:', links);
+      // Debug log removed
       
       // Update blockchain (updateLinks will filter empty URLs)
       await updateLinks(profileId, links);
@@ -449,7 +447,7 @@ export const Dashboard = () => {
     );
   }
 
-  if (profilesLoading && !showLoadingTimeout) {
+  if (profilesLoading) {
     return (
       <Box p="4">
         <Heading mb="4">LinkTree Dashboard</Heading>
@@ -474,30 +472,7 @@ export const Dashboard = () => {
     <Box p="4">
       <Heading mb="4">LinkTree Dashboard</Heading>
 
-      {(() => {
-        console.log("Render condition check:");
-        console.log("- profiles:", profiles);
-        console.log("- profiles.data:", profiles?.data);
-        console.log("- profiles.data.length:", profiles?.data?.length);
-        console.log("- profilesLoading:", profilesLoading);
-        console.log("- showLoadingTimeout:", showLoadingTimeout);
-        
-        // If loading timeout reached, show form regardless
-        if (showLoadingTimeout) {
-          console.log("- condition result (timeout): true - showing form");
-          return true;
-        }
-        
-        // If query error, show form
-        if (profilesError) {
-          console.log("- condition result (error): true - showing form");
-          return true;
-        }
-        
-        const result = !profiles?.data || profiles.data.length === 0;
-        console.log("- condition result:", result);
-        return result;
-      })() ? (
+      {(!profiles?.data || profiles.data.length === 0 || profilesError) ? (
         <Card>
           <Heading size="4" mb="4">
             Create Your Profile

@@ -40,6 +40,25 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  packages/backend:
+    dependencies:
+      '@mysten/enoki':
+        specifier: ^0.12.8
+        version: 0.12.8(@types/react@18.3.26)(react@18.3.1)(typescript@5.9.3)
+      '@mysten/sui':
+        specifier: ^1.43.1
+        version: 1.43.1(typescript@5.9.3)
+      express:
+        specifier: ^4.19.2
+        version: 4.21.2
+    devDependencies:
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
+      tsx:
+        specifier: ^4.7.0
+        version: 4.20.6
+
   packages/ui:
     dependencies:
       '@mysten/dapp-kit':
@@ -696,11 +715,29 @@ packages:
       react:
         optional: true
 
+  '@mysten/enoki@0.12.8':
+    resolution: {integrity: sha512-0Cz/a8o75Z7lPW87tSuTinMlZJsIyt6IeFBsZDZwfMwdL1z1c7iHWWxdL2WC8PmRggLnz5eKNtFNosnn8HGcQA==}
+    peerDependencies:
+      '@types/react': '>=17.0.0'
+      react: 18.3.1
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+
   '@mysten/ledgerjs-hw-app-sui@0.5.2':
     resolution: {integrity: sha512-qLLODXIZ7FZLqbxeSACGfOlN0jk9DYTQgE4GJDYyGFratVvthtSTg3/YjG+AkTPVzmOnZjiwWE3VyqDQ2qlSCA==}
 
+  '@mysten/ledgerjs-hw-app-sui@0.6.0':
+    resolution: {integrity: sha512-UopsSSI1gphfoh59feiPPhZUEybYIvYEcvmudGR2RAIN3IDJHkaA3Uu0HPH8BZQbQXhkgvFW4V2KNWIWj2IE2g==}
+
   '@mysten/signers@0.3.9':
     resolution: {integrity: sha512-DRwY6lKPBcSLHCdv/GznJ/xo7pTXmoISiWDtb7ol6bcYp18Ze7ksE8Sa5ymBOWNk6kgEune+89g3LN7HHKPbUw==}
+    engines: {node: '>=20'}
+
+  '@mysten/signers@0.5.7':
+    resolution: {integrity: sha512-cQ3b+rqfMldCtiQ7zayO4mCCj/nvZQpOzE7TyBnutC593+tMLTFnIkmop0lqakJWZ1x1kmJVfRK/e73sPiY7mQ==}
     engines: {node: '>=20'}
 
   '@mysten/slush-wallet@0.2.7':
@@ -3451,7 +3488,32 @@ snapshots:
       - supports-color
       - typescript
 
+  '@mysten/enoki@0.12.8(@types/react@18.3.26)(react@18.3.1)(typescript@5.9.3)':
+    dependencies:
+      '@mysten/signers': 0.5.7(typescript@5.9.3)
+      '@mysten/sui': 1.43.1(typescript@5.9.3)
+      '@mysten/wallet-standard': 0.19.4(typescript@5.9.3)
+      '@nanostores/react': 1.0.0(nanostores@1.0.1)(react@18.3.1)
+      '@wallet-standard/ui': 1.0.1
+      idb-keyval: 6.2.2
+      mitt: 3.0.1
+      nanostores: 1.0.1
+    optionalDependencies:
+      '@types/react': 18.3.26
+      react: 18.3.1
+    transitivePeerDependencies:
+      - '@gql.tada/svelte-support'
+      - '@gql.tada/vue-support'
+      - encoding
+      - supports-color
+      - typescript
+
   '@mysten/ledgerjs-hw-app-sui@0.5.2':
+    dependencies:
+      '@ledgerhq/hw-transport': 6.31.12
+      fast-sha256: 1.3.0
+
+  '@mysten/ledgerjs-hw-app-sui@0.6.0':
     dependencies:
       '@ledgerhq/hw-transport': 6.31.12
       fast-sha256: 1.3.0
@@ -3462,6 +3524,21 @@ snapshots:
       '@mysten/ledgerjs-hw-app-sui': 0.5.2
       '@mysten/sui': 1.37.6(typescript@5.9.3)
       '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      asn1-ts: 8.0.5
+    transitivePeerDependencies:
+      - '@gql.tada/svelte-support'
+      - '@gql.tada/vue-support'
+      - encoding
+      - supports-color
+      - typescript
+
+  '@mysten/signers@0.5.7(typescript@5.9.3)':
+    dependencies:
+      '@google-cloud/kms': 4.5.0
+      '@mysten/ledgerjs-hw-app-sui': 0.6.0
+      '@mysten/sui': 1.43.1(typescript@5.9.3)
+      '@noble/curves': 1.9.4
       '@noble/hashes': 1.8.0
       asn1-ts: 8.0.5
     transitivePeerDependencies:

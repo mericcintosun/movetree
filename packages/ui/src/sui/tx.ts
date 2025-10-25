@@ -1,12 +1,43 @@
 import { Transaction } from "@mysten/sui/transactions";
-import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { bcs } from "@mysten/sui/bcs";
 import { sha3_256 } from "@noble/hashes/sha3.js";
-import { useSponsor } from "./sponsor";
+import { normalizeSuiObjectId, isValidSuiObjectId } from '@mysten/sui/utils';
+import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { useSponsoredExecute } from './sponsor';
+
+// Normalize package ID once at module level
+const PKG_ID = (() => {
+  // Yeni deploy edilen kontrat ID'si
+  const raw = '0xbc3daaf8d67a2dc61c0dd15f4b66634d522693661f6f465654a7538fb386ed83';
+  const normalized = normalizeSuiObjectId(raw);   // objectId için doğru helper
+  if (!isValidSuiObjectId(normalized)) {
+    throw new Error(`Invalid VITE_PACKAGE_ID: ${raw}`);
+  }
+  return normalized;
+})();
+
+// Debug: PKG_ID kontrolü
+console.log('PKG_ID', PKG_ID, PKG_ID.length); // 66 karakter (0x + 64 hex) olmalı
 
 export const useProfileTransactions = () => {
-  const { mutateAsync: signAndExecuteTransaction } =
-    useSignAndExecuteTransaction();
+  const account = useCurrentAccount();
+  const sponsorAndExecute = useSponsoredExecute();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+
+  // Early return if no account
+  if (!account) {
+    return {
+      createProfile: () => Promise.reject(new Error("Please connect wallet first")),
+      updateLinks: () => Promise.reject(new Error("Please connect wallet first")),
+      updateLinksVerified: () => Promise.reject(new Error("Please connect wallet first")),
+      viewLinkEvent: () => Promise.reject(new Error("Please connect wallet first")),
+      setTheme: () => Promise.reject(new Error("Please connect wallet first")),
+      deleteProfile: () => Promise.reject(new Error("Please connect wallet first")),
+      updateTags: () => Promise.reject(new Error("Please connect wallet first")),
+      incrementProfileView: () => Promise.reject(new Error("Please connect wallet first")),
+      trackLinkClick: () => Promise.reject(new Error("Please connect wallet first")),
+    };
+  }
 
   const createProfile = async (
     name: string,
@@ -16,7 +47,7 @@ export const useProfileTransactions = () => {
   ) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::create_profile`,
+      target: `${PKG_ID}::profile::create_profile`,
       arguments: [
         tx.pure.string(name),
         tx.pure.string(avatarCid),
@@ -25,7 +56,10 @@ export const useProfileTransactions = () => {
       ],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    // Enoki sponsored transaction - gasless
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::create_profile`],
+    });
   };
 
   const updateLinks = async (
@@ -45,14 +79,16 @@ export const useProfileTransactions = () => {
 
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::upsert_links`,
+      target: `${PKG_ID}::profile::upsert_links`,
       arguments: [
         tx.object(profileId), 
         tx.pure.vector("string", urls)
       ],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   // NEW: verified links
@@ -68,7 +104,7 @@ export const useProfileTransactions = () => {
 
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::upsert_links_verified`,
+      target: `${PKG_ID}::profile::upsert_links_verified`,
       arguments: [
         tx.object(profileId),
         tx.pure.vector("string", urls),
@@ -82,7 +118,7 @@ export const useProfileTransactions = () => {
   const viewLinkEvent = async (profileId: string, index: number) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::view_link`,
+      target: `${PKG_ID}::profile::view_link`,
       arguments: [
         tx.object(profileId),        // <-- address DEĞİL, object()
         tx.pure.u64(index),
@@ -94,51 +130,61 @@ export const useProfileTransactions = () => {
   const setTheme = async (profileId: string, theme: string) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::set_theme`,
+      target: `${PKG_ID}::profile::set_theme`,
       arguments: [tx.object(profileId), tx.pure.string(theme)],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   const deleteProfile = async (profileId: string) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::delete_profile`,
+      target: `${PKG_ID}::profile::delete_profile`,
       arguments: [tx.object(profileId)],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   const updateTags = async (profileId: string, tags: string[]) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::update_tags`,
+      target: `${PKG_ID}::profile::update_tags`,
       arguments: [tx.object(profileId), tx.pure.vector("string", tags)],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   const incrementProfileView = async (profileId: string) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::increment_profile_view`,
+      target: `${PKG_ID}::profile::increment_profile_view`,
       arguments: [tx.object(profileId)],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   const trackLinkClick = async (profileId: string, linkIndex: number) => {
     const tx = new Transaction();
     tx.moveCall({
-      target: `${import.meta.env.VITE_PACKAGE_ID}::profile::view_link`,
+      target: `${PKG_ID}::profile::view_link`,
       arguments: [tx.object(profileId), tx.pure.u64(linkIndex)],
     });
 
-    return await signAndExecuteTransaction({ transaction: tx });
+    return await sponsorAndExecute(tx, {
+      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
+    });
   };
 
   return {
@@ -154,20 +200,3 @@ export const useProfileTransactions = () => {
   };
 };
 
-/**
- * Sponsored view link - zkLogin kullanıcılar için
- * Bu fonksiyon cüzdan gerektirmez, backend sponsor eder
- */
-export function useViewLinkSponsored() {
-  const sponsorAndExecute = useSponsor();
-
-  return async function viewLinkSponsored(pkgId: string, profileId: string, index: number, sender: string) {
-    const tx = new Transaction();
-    tx.moveCall({
-      target: `${pkgId}::profile::view_link`,
-      arguments: [tx.object(profileId), tx.pure.u64(index)],
-    });
-
-    return sponsorAndExecute(tx, sender);
-  };
-}

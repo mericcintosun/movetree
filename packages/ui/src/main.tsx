@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Theme } from "@radix-ui/themes";
 import App from "./App.tsx";
 import { RegisterEnokiWallets } from "./sui/RegisterEnokiWallets";
+import { EnokiProvider } from "./auth/EnokiProvider";
 
 const queryClient = new QueryClient();
 
@@ -28,9 +29,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
           {/* localStorage ile persist, sayfa yenileyince geri bağlanma */}
           <WalletProvider autoConnect storage={localStorage}>
-            <RegisterEnokiWallets />
-            <AutoConnectOnce />
-            <App />
+            <EnokiProvider>
+              <RegisterEnokiWallets />
+              <AutoConnectOnce />
+              <App />
+            </EnokiProvider>
           </WalletProvider>
         </SuiClientProvider>
       </QueryClientProvider>

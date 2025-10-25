@@ -1,101 +1,87 @@
 import { Transaction } from "@mysten/sui/transactions";
-import { useSignTransaction } from "@mysten/dapp-kit";
-import { fromB64, toB64 } from "@mysten/sui/utils";
+import { toB64 } from "@mysten/sui/utils";
+import {
+  useSignTransaction,
+  useCurrentAccount,
+  useSuiClient,
+} from "@mysten/dapp-kit";
 
-/**
- * Sponsor helper hook
- */
-export function useSponsor() {
+export function useSponsoredExecute() {
   const { mutateAsync: signTransaction } = useSignTransaction();
+  const account = useCurrentAccount();
+  const client = useSuiClient();
 
-  return async function sponsorAndExecute(tx: Transaction, sender: string) {
-    // 1) onlyTransactionKind bytes üret
-    const bytes = await tx.build({ onlyTransactionKind: true });
+  return async function sponsorAndExecute(
+    tx: Transaction,
+    opts: {
+      allowedMoveCallTargets?: string[];
+      allowedAddresses?: string[];
+    } = {},
+  ) {
+    // Account kontrolü fonksiyon içinde yapılıyor
+    if (!account?.address) {
+      throw new Error("No account connected");
+    }
 
-    // 2) sponsor isteği (backend)
-    const s = await fetch(`${import.meta.env.VITE_BACKEND_URL}/sponsor`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        txBytesB64: toB64(bytes),
-        sender,
-        allowedMoveCallTargets: [
-          `${import.meta.env.VITE_PACKAGE_ID}::profile::view_link`,
-        ],
-      }),
-    }).then((r) => r.json());
+    // 1) Sadece transaction kind byte'larını üret
+    const txBytes = await tx.build({
+      client,
+      onlyTransactionKind: true,
+    });
+    const transactionKindBytesB64 = toB64(txBytes);
 
-    // 3) kullanıcı imzası
-    const { signature } = await signTransaction({
-      transaction: fromB64(s.bytes),
+    // 2) Backend'ten sponsor iste
+    console.log("🔗 Backend URL:", import.meta.env.VITE_BACKEND_URL);
+    console.log("📤 Request data:", {
+      transactionKindBytesB64: transactionKindBytesB64.substring(0, 50) + "...",
+      sender: account.address,
+      allowedMoveCallTargets: opts.allowedMoveCallTargets ?? [],
+      allowedAddresses: opts.allowedAddresses ?? [],
     });
 
-    // 4) execute (backend)
-    return fetch(`${import.meta.env.VITE_BACKEND_URL}/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        digest: s.digest,
-        signatureB64: toB64(signature),
-      }),
-    }).then((r) => r.json());
+    const resp = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/enoki/sponsor`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionBlockKindBytesB64: transactionKindBytesB64,
+          sender: account.address,
+          allowedMoveCallTargets: opts.allowedMoveCallTargets ?? [],
+          allowedAddresses: opts.allowedAddresses ?? [],
+          zkLoginJwt: "mock-jwt", // TODO: Get real JWT from Enoki wallet
+        }),
+      },
+    );
+
+    console.log("📥 Response status:", resp.status);
+    const respData = await resp.json();
+    console.log("📥 Response data:", respData);
+
+    if (respData.error) throw new Error(respData.error);
+
+    // 3) Kullanıcı imzası (Enoki wallet bağlıysa bu noktada imzalayabilir)
+    console.log("🔐 Requesting signature for transaction:", respData.digest);
+    const { signature } = await signTransaction({
+      transaction: respData.bytesB64,
+    });
+    console.log("✅ Signature received:", signature ? "Yes" : "No");
+    if (!signature) throw new Error("Failed to sign sponsored tx.");
+
+    // 4) Backend execute
+    const exec = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/enoki/execute`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          digest: respData.digest,
+          userSignatureB64: signature,
+        }),
+      },
+    ).then((r) => r.json());
+
+    if (exec.error) throw new Error(exec.error);
+    return exec;
   };
-}
-
-/**
- * 1) Sponsor uç noktasına PTB (onlyKind) gönder
- * Enoki backend'ine PTB'nin sadece transaction kind kısmını gönderir
- * ve sponsorlu transaction bytes'ını alır
- */
-export async function requestSponsorship(
-  tx: Transaction,
-  sender: string,
-  allowedMoveCallTargets: string[],
-) {
-  // Güvenlik: onlyTransactionKind kullan
-  const kindBytes = await tx.build({ onlyTransactionKind: true });
-
-  const resp = await fetch("/api/enoki/sponsor", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      kindBytesBase64: toB64(kindBytes),
-      sender,
-      allowedMoveCallTargets,
-    }),
-  });
-
-  if (!resp.ok) {
-    const errorText = await resp.text();
-    throw new Error(`Sponsor failed: ${errorText}`);
-  }
-
-  const { bytesBase64, digest } = await resp.json();
-  return { txBytes: fromB64(bytesBase64), digest };
-}
-
-/**
- * 2) İmzayı backend'e gönder ve finalize et
- * Kullanıcının wallet imzasını alır ve Enoki backend'ine gönderir
- * Transaction finalize edilir
- */
-export async function executeSponsored(
-  digest: string,
-  userSignature: Uint8Array,
-) {
-  const resp = await fetch("/api/enoki/execute", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      digest,
-      userSignatureBase64: toB64(userSignature),
-    }),
-  });
-
-  if (!resp.ok) {
-    const errorText = await resp.text();
-    throw new Error(`Execute failed: ${errorText}`);
-  }
-
-  return resp.json();
 }

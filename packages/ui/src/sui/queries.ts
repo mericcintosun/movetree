@@ -19,9 +19,7 @@ export const useOwnedProfiles = (address: string) => {
   const packageId = import.meta.env.VITE_PACKAGE_ID;
   const structType = `${packageId}::profile::LinkTreeProfile`;
   
-  console.log("useOwnedProfiles - address:", address);
-  console.log("useOwnedProfiles - packageId:", packageId);
-  console.log("useOwnedProfiles - structType:", structType);
+  // Debug logs removed for cleaner console
   
   return useSuiClientQuery("getOwnedObjects", {
     owner: address,
