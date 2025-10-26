@@ -56,6 +56,7 @@ profile data is truly owned by you and cannot be censored or taken down.
 
 ```
 movetree/
+<<<<<<< HEAD
 ├── packages/
 │   ├── move/                 # Sui Move smart contracts
 │   │   ├── sources/
@@ -82,6 +83,29 @@ movetree/
 │   ├── link-suins.ts         # SuiNS domain linking
 │   └── enoki-server.ts       # Enoki server setup
 └── README.md
+=======
+├─ packages/
+│  ├─ move/                 # Sui Move paketi (LinkTreeProfile)
+│  │  ├─ sources/
+│  │  └─ Move.toml
+│  └─ ui/                   # dApp Kit ile React app (LYNQ editör + public)
+│     ├─ src/
+│     │  ├─ app/            # private dashboard (create/update)
+│     │  ├─ public/         # public profile page (/u/:id, /@:name)
+│     │  ├─ sui/            # client, queries, tx helpers
+│     │  └─ components/
+│     ├─ vite.config.ts
+│     └─ index.html
+├─ walrus/
+│  ├─ sites-config.yaml     # testnet context
+│  └─ ws-resources.json     # publish sonrası site objesi & blob referansları
+├─ scripts/
+│  ├─ publish-walrus.ts     # (ops) CLI wrap: build->publish->print URLs
+│  └─ link-suins.ts         # (ops) suins SDK ile "link site" örneği
+├─ README.md
+└─ .github/workflows/
+   └─ walrus-ci.yml         # (ops) CI/CD ile site-builder publish
+>>>>>>> 15274620ab32b1f6a0471912df4e801e0ffd6e0a
 ```
 
 ## 🚀 Quick Start

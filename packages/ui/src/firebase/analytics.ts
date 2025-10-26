@@ -16,6 +16,7 @@ export interface ProfileAnalytics {
   profileViews: number;
   linkClicks: number[];
   links: string[];
+  linkLabels?: string[];
   lastSyncedToBlockchain: Date | null;
   lastUpdated: Date;
   needsBlockchainSync: boolean;
@@ -40,6 +41,7 @@ export async function getAnalytics(
         profileViews: data.profileViews || 0,
         linkClicks: data.linkClicks || [],
         links: data.links || [],
+        linkLabels: data.linkLabels || [],
         lastSyncedToBlockchain: data.lastSyncedToBlockchain?.toDate() || null,
         lastUpdated: data.lastUpdated?.toDate() || new Date(),
         needsBlockchainSync: data.needsBlockchainSync || false,
@@ -194,6 +196,50 @@ export async function incrementLinkClick(
   } catch (error) {
     console.error("Error incrementing link click:", error);
     throw error; // Re-throw to let caller handle it
+  }
+}
+
+/**
+ * Update links and labels in analytics
+ */
+export async function updateAnalyticsLinksWithLabels(
+  profileId: string,
+  links: string[],
+  labels: string[]
+): Promise<void> {
+  try {
+    const docRef = doc(db, "analytics", profileId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      await setDoc(docRef, {
+        profileId,
+        profileViews: 0,
+        linkClicks: new Array(links.length).fill(0),
+        links,
+        linkLabels: labels,
+        lastSyncedToBlockchain: null,
+        lastUpdated: serverTimestamp(),
+        needsBlockchainSync: false,
+      });
+      return;
+    }
+
+    const data = docSnap.data();
+    const oldLinkClicks = data.linkClicks || [];
+
+    // Preserve existing click counts, add zeros for new links
+    const newLinkClicks = links.map((_, index) => oldLinkClicks[index] || 0);
+
+    await updateDoc(docRef, {
+      links,
+      linkLabels: labels,
+      linkClicks: newLinkClicks,
+      lastUpdated: serverTimestamp(),
+      needsBlockchainSync: true,
+    });
+  } catch (error) {
+    console.error("Error updating analytics links with labels:", error);
   }
 }
 
