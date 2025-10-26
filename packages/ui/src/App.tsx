@@ -5,82 +5,148 @@ import { Dashboard } from "./app/Dashboard";
 import { PublicProfile } from "./public/PublicProfile";
 import { LoginButtons } from "./auth/LoginButtons";
 import { RegisterEnokiWallets } from "./sui/RegisterEnokiWallets";
+import "./styles/theme.css";
 
 function App() {
   const [currentView, setCurrentView] = useState<"dashboard" | "profile">(
     "dashboard",
   );
   const [profileObjectId, setProfileObjectId] = useState("");
-  console.log("google client id", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   return (
     <>
       <RegisterEnokiWallets />
-      <Flex
-        position="sticky"
-        px="4"
-        py="2"
-        justify="between"
+      
+      {/* Modern Glass Header */}
+      <header
+        className="glass"
         style={{
-          borderBottom: "1px solid var(--gray-a2)",
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
-        <Box>
-          <Heading>MoveTree</Heading>
-        </Box>
-
-        <Flex gap="2" align="center">
-          <Button
-            variant={currentView === "dashboard" ? "solid" : "outline"}
-            onClick={() => setCurrentView("dashboard")}
+        <div className="container-modern">
+          <Flex
+            py="4"
+            justify="between"
+            align="center"
+            style={{ minHeight: "72px" }}
           >
-            Dashboard
-          </Button>
-          <Button
-            variant={currentView === "profile" ? "solid" : "outline"}
-            onClick={() => setCurrentView("profile")}
-          >
-            View Profile
-          </Button>
-          <LoginButtons />
-          <ConnectButton />
-        </Flex>
-      </Flex>
-
-      <Container>
-        {currentView === "dashboard" ? (
-          <Dashboard />
-        ) : (
-          <Box p="4">
-            <Box mb="4">
-              <Heading size="4" mb="2">
-                View Profile
+            {/* Logo */}
+            <Box>
+              <Heading
+                size="6"
+                className="text-gradient"
+                style={{
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  cursor: "pointer",
+                }}
+                onClick={() => setCurrentView("dashboard")}
+              >
+                🌳 MoveTree
               </Heading>
-              <Flex gap="2">
-                <input
-                  type="text"
-                  placeholder="Enter Object ID"
-                  value={profileObjectId}
-                  onChange={(e) => setProfileObjectId(e.target.value)}
-                  style={{
-                    padding: "8px 12px",
-                    border: "1px solid var(--gray-6)",
-                    borderRadius: "4px",
-                    backgroundColor: "var(--gray-2)",
-                    color: "var(--gray-12)",
-                    minWidth: "300px",
-                  }}
-                />
-                <Button onClick={() => setCurrentView("profile")}>
-                  Load Profile
-                </Button>
-              </Flex>
             </Box>
 
-            {profileObjectId && <PublicProfile objectId={profileObjectId} />}
-          </Box>
-        )}
-      </Container>
+            {/* Navigation */}
+            <Flex gap="3" align="center">
+              <Flex gap="2" align="center">
+                <button
+                  className={currentView === "dashboard" ? "btn-primary" : "btn-outline"}
+                  onClick={() => setCurrentView("dashboard")}
+                  style={{
+                    fontSize: "14px",
+                    padding: "10px 20px",
+                  }}
+                >
+                  Dashboard
+                </button>
+                <button
+                  className={currentView === "profile" ? "btn-primary" : "btn-outline"}
+                  onClick={() => setCurrentView("profile")}
+                  style={{
+                    fontSize: "14px",
+                    padding: "10px 20px",
+                  }}
+                >
+                  View Profile
+                </button>
+              </Flex>
+              <LoginButtons />
+              <div style={{
+                borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
+                height: "32px",
+                margin: "0 8px",
+              }} />
+              <ConnectButton />
+            </Flex>
+          </Flex>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main style={{
+        minHeight: "calc(100vh - 72px)",
+        background: "radial-gradient(ellipse at top, rgba(55, 197, 179, 0.05) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(197, 132, 246, 0.05) 0%, transparent 50%)",
+      }}>
+        <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
+          {currentView === "dashboard" ? (
+            <Dashboard />
+          ) : (
+            <Box className="fade-in">
+              <Box mb="5" className="card-modern" p="5">
+                <Heading size="5" mb="4" style={{ fontWeight: 600 }}>
+                  🔍 View Profile
+                </Heading>
+                <Flex gap="3" direction="column">
+                  <input
+                    className="input-modern"
+                    type="text"
+                    placeholder="Enter Profile Object ID..."
+                    value={profileObjectId}
+                    onChange={(e) => setProfileObjectId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      fontSize: "15px",
+                    }}
+                  />
+                  <button
+                    className="btn-primary"
+                    onClick={() => setCurrentView("profile")}
+                    disabled={!profileObjectId.trim()}
+                    style={{
+                      alignSelf: "flex-start",
+                      opacity: !profileObjectId.trim() ? 0.5 : 1,
+                      cursor: !profileObjectId.trim() ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Load Profile →
+                  </button>
+                </Flex>
+              </Box>
+
+              {profileObjectId && <PublicProfile objectId={profileObjectId} />}
+            </Box>
+          )}
+        </Container>
+      </main>
+
+      {/* Footer */}
+      <footer style={{
+        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        padding: "var(--space-5) 0",
+        textAlign: "center",
+        color: "var(--text-tertiary)",
+        fontSize: "14px",
+      }}>
+        <div className="container-modern">
+          <p style={{ margin: 0 }}>
+            Built with 💚 on <span className="text-gradient">Sui Blockchain</span>
+          </p>
+        </div>
+      </footer>
     </>
   );
 }
