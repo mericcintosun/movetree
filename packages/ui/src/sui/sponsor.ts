@@ -33,7 +33,15 @@ export function useSponsoredExecute() {
     });
     const transactionKindBytesB64 = toB64(txBytes);
 
-    // 2) Backend'ten sponsor iste
+    // 2) JWT zorunlu: Google zkLogin olmadan sponsor çağrısı yapılmasın
+    const jwt = (account as any)?.jwt as string | undefined;
+    if (!jwt) {
+      throw new Error(
+        "Google ile giriş (zkLogin) gerekli: JWT bulunamadı. Lütfen 'Sign in with Google' ile bağlanın."
+      );
+    }
+
+    // 3) Backend'ten sponsor iste
     console.log("🔗 Backend URL:", import.meta.env.VITE_BACKEND_URL);
     console.log("📤 Request data:", {
       transactionKindBytes: transactionKindBytesB64.substring(0, 50) + "...",
@@ -49,7 +57,7 @@ export function useSponsoredExecute() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "zklogin-jwt": account.jwt || "mock-jwt", // Get real JWT from Enoki wallet
+          "zklogin-jwt": jwt,
         },
         body: JSON.stringify({
           transactionKindBytes: transactionKindBytesB64,
@@ -66,7 +74,7 @@ export function useSponsoredExecute() {
 
     if (respData.error) throw new Error(respData.error);
 
-    // 3) Kullanıcı imzası (Enoki wallet bağlıysa bu noktada imzalayabilir)
+    // 4) Kullanıcı imzası (Enoki wallet bağlıysa bu noktada imzalayabilir)
     console.log("🔐 Requesting signature for transaction:", respData.digest);
     const { signature } = await signTransaction({
       transaction: respData.bytesB64,
@@ -74,7 +82,7 @@ export function useSponsoredExecute() {
     console.log("✅ Signature received:", signature ? "Yes" : "No");
     if (!signature) throw new Error("Failed to sign sponsored tx.");
 
-    // 4) Backend execute
+    // 5) Backend execute
     const exec = await fetch(
       `${import.meta.env.VITE_BACKEND_URL}/api/enoki/execute`,
       {

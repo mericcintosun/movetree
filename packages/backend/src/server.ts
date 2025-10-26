@@ -1,13 +1,19 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import fs from "fs";
+import path from "path";
 import { EnokiClient } from "@mysten/enoki";
 import { fromB64, toB64 } from "@mysten/sui/utils";
 
 const app = express();
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+    ],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "zklogin-jwt"],
   })
@@ -202,6 +208,70 @@ app.post("/api/enoki/execute", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT ?? 3001, () =>
-  console.log(`Enoki backend listening on :${process.env.PORT ?? 3001}`)
+// Simple health check for load balancers and debugging
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+// ---------------------------
+// Simple Name Registry (file-based)
+// ---------------------------
+type NameRecord = { objectId: string; owner?: string; registeredAt: string };
+const REGISTRY_PATH = process.env.PROFILE_NAME_REGISTRY_PATH || path.join(process.cwd(), "profile-name-registry.json");
+let nameRegistry: Record<string, NameRecord> = {};
+
+function loadRegistry() {
+  try {
+    if (fs.existsSync(REGISTRY_PATH)) {
+      const raw = fs.readFileSync(REGISTRY_PATH, "utf8");
+      nameRegistry = JSON.parse(raw);
+    }
+  } catch (e) {
+    console.warn("⚠️ Failed to load name registry:", e);
+    nameRegistry = {};
+  }
+}
+
+function saveRegistry() {
+  try {
+    fs.writeFileSync(REGISTRY_PATH, JSON.stringify(nameRegistry, null, 2));
+  } catch (e) {
+    console.warn("⚠️ Failed to save name registry:", e);
+  }
+}
+
+function normalizeName(input: string): string {
+  return input.trim().toLowerCase();
+}
+
+loadRegistry();
+
+app.get("/api/profile-name/check/:name", (req, res) => {
+  const name = normalizeName(req.params.name || "");
+  if (!name || name.length < 3) return res.status(400).json({ error: "invalid name" });
+  return res.json({ available: !nameRegistry[name] });
+});
+
+app.get("/api/profile-name/resolve/:name", (req, res) => {
+  const name = normalizeName(req.params.name || "");
+  const rec = nameRegistry[name];
+  if (!rec) return res.status(404).json({ error: "not found" });
+  return res.json({ objectId: rec.objectId, owner: rec.owner });
+});
+
+app.post("/api/profile-name/register", (req, res) => {
+  const { name: rawName, objectId, owner } = req.body || {};
+  const name = normalizeName(rawName || "");
+  if (!name || name.length < 3) return res.status(400).json({ error: "invalid name" });
+  if (!objectId || typeof objectId !== "string") return res.status(400).json({ error: "invalid objectId" });
+  if (nameRegistry[name]) return res.status(409).json({ error: "name already taken" });
+  nameRegistry[name] = { objectId, owner, registeredAt: new Date().toISOString() };
+  saveRegistry();
+  return res.json({ ok: true });
+});
+
+const PORT = Number(process.env.PORT ?? 3001);
+const HOST = process.env.HOST ?? "0.0.0.0";
+app.listen(PORT, HOST, () =>
+  console.log(`Enoki backend listening on http://${HOST}:${PORT}`)
 );

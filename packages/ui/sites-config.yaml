@@ -7,7 +7,7 @@ contexts:
       wallet_env: testnet
       walrus_context: testnet
       walrus_package: 0xd84704c17fc870b8764832c535aa6b11f21a95cd6f5bb38a9b07d2cf42220c66
-      walrus_binary: /usr/local/bin/walrus
+      walrus_binary: /Users/mericcintosun/.local/bin/walrus
       walrus_config: /Users/mericcintosun/.config/walrus/client_config.yaml
   mainnet:
     portal: wal.app
@@ -17,6 +17,6 @@ contexts:
       wallet_env: mainnet
       walrus_context: mainnet
       walrus_package: 0xfdc88f7d7cf30afab2f82e8380d11ee8f70efb90e863d1de8616fae1bb09ea77
-      walrus_binary: /usr/local/bin/walrus
+      walrus_binary: /Users/mericcintosun/.local/bin/walrus
       walrus_config: /Users/mericcintosun/.config/walrus/client_config.yaml
 default_context: testnet

@@ -23,6 +23,18 @@ export const useProfileTransactions = () => {
   const account = useCurrentAccount();
   const sponsorAndExecute = useSponsoredExecute();
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const jwt = (account as any)?.jwt as string | undefined;
+
+  // Centralized execution: sponsored if Google zkLogin (JWT), else normal wallet execution
+  const executeTx = async (
+    tx: Transaction,
+    allowedMoveCallTargets: string[]
+  ) => {
+    if (jwt) {
+      return sponsorAndExecute(tx, { allowedMoveCallTargets });
+    }
+    return signAndExecuteTransaction({ transaction: tx });
+  };
 
   // Early return if no account
   if (!account) {
@@ -56,10 +68,7 @@ export const useProfileTransactions = () => {
       ],
     });
 
-    // Enoki sponsored transaction - gasless
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::create_profile`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::create_profile`]);
   };
 
   const updateLinks = async (
@@ -86,9 +95,7 @@ export const useProfileTransactions = () => {
       ],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::upsert_links`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::upsert_links`]);
   };
 
   // NEW: verified links
@@ -134,9 +141,7 @@ export const useProfileTransactions = () => {
       arguments: [tx.object(profileId), tx.pure.string(theme)],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::set_theme`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::set_theme`]);
   };
 
   const deleteProfile = async (profileId: string) => {
@@ -146,9 +151,7 @@ export const useProfileTransactions = () => {
       arguments: [tx.object(profileId)],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::delete_profile`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::delete_profile`]);
   };
 
   const updateTags = async (profileId: string, tags: string[]) => {
@@ -158,9 +161,7 @@ export const useProfileTransactions = () => {
       arguments: [tx.object(profileId), tx.pure.vector("string", tags)],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::update_tags`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::update_tags`]);
   };
 
   const incrementProfileView = async (profileId: string) => {
@@ -170,9 +171,7 @@ export const useProfileTransactions = () => {
       arguments: [tx.object(profileId)],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::increment_profile_view`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::increment_profile_view`]);
   };
 
   const trackLinkClick = async (profileId: string, linkIndex: number) => {
@@ -182,9 +181,7 @@ export const useProfileTransactions = () => {
       arguments: [tx.object(profileId), tx.pure.u64(linkIndex)],
     });
 
-    return await sponsorAndExecute(tx, {
-      allowedMoveCallTargets: [`${PKG_ID}::profile::view_link`],
-    });
+    return await executeTx(tx, [`${PKG_ID}::profile::view_link`]);
   };
 
   return {
