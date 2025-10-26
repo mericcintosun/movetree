@@ -5,6 +5,7 @@ import { Dashboard } from "./app/Dashboard";
 import { PublicProfile } from "./public/PublicProfile";
 import { LoginButtons } from "./auth/LoginButtons";
 import { RegisterEnokiWallets } from "./sui/RegisterEnokiWallets";
+import { InteractiveBackground } from "./components/InteractiveBackground";
 import "./styles/theme.css";
 
 function App() {
@@ -17,13 +18,16 @@ function App() {
     <>
       <RegisterEnokiWallets />
       
+      {/* Interactive Background */}
+      <InteractiveBackground />
+      
       {/* Modern Glass Header */}
       <header
         className="glass"
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 1000,
+          zIndex: 100,
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
@@ -89,7 +93,8 @@ function App() {
       {/* Main Content */}
       <main style={{
         minHeight: "calc(100vh - 72px)",
-        background: "radial-gradient(ellipse at top, rgba(55, 197, 179, 0.05) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(197, 132, 246, 0.05) 0%, transparent 50%)",
+        position: "relative",
+        zIndex: 1,
       }}>
         <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
           {currentView === "dashboard" ? (
@@ -140,6 +145,8 @@ function App() {
         textAlign: "center",
         color: "var(--text-tertiary)",
         fontSize: "14px",
+        position: "relative",
+        zIndex: 1,
       }}>
         <div className="container-modern">
           <p style={{ margin: 0 }}>
