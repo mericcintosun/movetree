@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ConnectButton } from "@mysten/dapp-kit";
 import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
 import { Dashboard } from "./app/Dashboard";
@@ -13,6 +13,38 @@ function App() {
     "dashboard",
   );
   const [profileObjectId, setProfileObjectId] = useState("");
+  const [pathName, setPathName] = useState<string>("/");
+
+  // Resolve /:name to objectId via backend registry
+  useEffect(() => {
+    const handle = async () => {
+      try {
+        const path = window.location.pathname || "/";
+        setPathName(path);
+        const slug = path.replace(/^\//, "");
+        if (!slug) return;
+        const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL as string | undefined;
+        if (!backendUrl) {
+          console.warn("[resolver] VITE_BACKEND_URL is not set; skipping name resolution");
+          return;
+        }
+        console.log("[resolver] resolving name", slug, "via", backendUrl);
+        const resp = await fetch(`${backendUrl}/api/profile-name/resolve/${encodeURIComponent(slug)}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data?.objectId) {
+            setProfileObjectId(data.objectId);
+            setCurrentView("profile");
+          }
+        } else {
+          console.log("[resolver] name not found:", slug, resp.status);
+        }
+      } catch (e) {
+        console.warn("[resolver] failed:", e);
+      }
+    };
+    handle();
+  }, []);
 
   return (
     <>

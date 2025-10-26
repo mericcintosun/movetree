@@ -9,12 +9,12 @@ import {
   Card,
   Section,
 } from "@radix-ui/themes";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useProfileTransactions } from "../sui/tx";
 import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
 import { useFirebaseAnalytics } from "../hooks/useAnalytics";
 import { useBlockchainSync } from "../hooks/useBlockchainSync";
-import { updateAnalyticsLinks, updateAnalyticsLinksWithLabels, initializeAnalytics, getAnalytics, deleteAnalytics } from "../firebase/analytics";
+import { updateAnalyticsLinks, initializeAnalytics, getAnalytics, deleteAnalytics } from "../firebase/analytics";
 
 interface LinkItem {
   label: string;
@@ -548,8 +548,9 @@ const ProfileCard = ({
 // Main Dashboard Component
 export const Dashboard = () => {
   const account = useCurrentAccount();
+  const client = useSuiClient();
   const { createProfile, updateLinks, updateTags, deleteProfile } = useProfileTransactions();
-  const { data: profiles, refetch, isLoading: profilesLoading } = useOwnedProfiles(account?.address || "");
+  const { data: profiles, refetch, isLoading: profilesLoading, error: profilesError } = useOwnedProfiles(account?.address || "");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -558,6 +559,7 @@ export const Dashboard = () => {
     theme: "dark",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [overrideProfiles, setOverrideProfiles] = useState<any[] | null>(null);
 
   const currentProfileData = profiles?.data?.[0]?.data?.content as any;
   const currentProfileTags = currentProfileData?.fields?.tags || [];
@@ -577,11 +579,61 @@ export const Dashboard = () => {
       alert("Please enter a name");
       return;
     }
+    
+    // Normalize name -> slug for URL usage (lowercase, hyphenated)
+    const nameSlug = formData.name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    // Prepare values used later in refresh/registration
+    const initialList = profiles?.data || [];
+    const initialIds = new Set((initialList as any[]).map((p: any) => p?.data?.objectId).filter(Boolean));
+    const initialCount = initialList.length;
     setIsLoading(true);
     try {
-      await createProfile(formData.name, formData.avatarCid, formData.bio, formData.theme);
+      await createProfile(
+        formData.name,
+        formData.avatarCid,
+        formData.bio,
+        formData.theme,
+      );
       await refetch();
-      alert("Profile created successfully!");
+      for (let i = 0; i < 8; i++) {
+        const result: any = await refetch();
+        const currCount = result?.data?.data?.length || 0;
+        if (currCount > initialCount) break;
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      // Derive created objectId by diff if not previously registered
+      try {
+        const latest: any = await refetch();
+        const latestList = (latest?.data?.data || []) as any[];
+        const newItem = latestList.find((p: any) => p?.data?.objectId && !initialIds.has(p.data.objectId));
+        const derivedId: string | undefined = newItem?.data?.objectId;
+        if (derivedId) {
+          const backendUrl = (import.meta as any).env?.VITE_BACKEND_URL as string | undefined;
+          if (!backendUrl) {
+            console.warn("[name-register:derived] VITE_BACKEND_URL is not set");
+          } else {
+            console.log("[name-register:derived] registering", nameSlug, derivedId);
+            await fetch(`${backendUrl}/api/profile-name/register`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: nameSlug, objectId: derivedId, owner: account.address }),
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[name-register:derived] failed", e);
+      }
+      // Clear override after successful refresh
+      setOverrideProfiles(null);
+      // Reset form for next profile creation
+      setFormData({ name: "", avatarCid: "", bio: "", theme: "dark" });
+      alert("Profile created successfully! You can view it at /" + nameSlug);
     } catch (error) {
       console.error("Failed to create profile:", error);
       alert(`Profile creation failed: ${(error as Error).message || error}`);
@@ -594,9 +646,8 @@ export const Dashboard = () => {
     setIsLoading(true);
     try {
       await updateLinks(profileId, links);
-      const urls = links.map(l => l.url).filter(url => url && url.trim() !== "");
-      const labels = links.map(l => l.label || "");
-      await updateAnalyticsLinksWithLabels(profileId, urls, labels);
+      const urls = links.map((l) => l.url).filter((url) => url && url.trim() !== "");
+      await updateAnalyticsLinks(profileId, urls);
       await refetch();
       alert("✅ Links updated successfully!");
     } catch (error) {
@@ -666,44 +717,83 @@ export const Dashboard = () => {
     );
   }
 
+  if (!(import.meta as any).env?.VITE_PACKAGE_ID) {
+    return (
+      <Box className="card-modern fade-in" p="6">
+        <Heading size="5" mb="3" style={{ color: "#ff6b6b" }}>
+          ⚠️ Configuration Error
+        </Heading>
+        <Text color="gray">
+          VITE_PACKAGE_ID environment variable is not set. Please configure it in your .env.local file.
+        </Text>
+      </Box>
+    );
+  }
+
   return (
     <Box className="fade-in">
-      {(!profiles?.data || profiles.data.length === 0) ? (
-        <div className="card-modern" style={{ padding: "var(--space-7)", maxWidth: "600px", margin: "0 auto" }}>
+      {(!profiles?.data || profiles.data.length === 0 || profilesError) ? (
+        <div className="card-modern" style={{ padding: "var(--space-7)" }}>
           <Heading size="6" mb="5" className="text-gradient" style={{ fontWeight: 700 }}>
             ✨ Create Your Profile
           </Heading>
-
+          
           <Flex direction="column" gap="4">
             <Box>
-              <Text size="2" weight="bold" mb="2">Name *</Text>
+              <Text size="2" weight="bold" mb="2" style={{ color: "var(--text-primary)" }}>
+                Name *
+              </Text>
               <input
                 className="input-modern"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Your name"
+                style={{ width: "100%", fontSize: "15px" }}
               />
             </Box>
 
             <Box>
-              <Text size="2" weight="bold" mb="2">Avatar CID</Text>
+              <Text size="2" weight="bold" mb="2" style={{ color: "var(--text-primary)" }}>
+                Avatar CID
+              </Text>
               <input
                 className="input-modern"
                 value={formData.avatarCid}
-                onChange={(e) => setFormData({ ...formData, avatarCid: e.target.value })}
-                placeholder="IPFS CID (optional)"
+                onChange={(e: any) => setFormData({ ...formData, avatarCid: e.target.value })}
+                placeholder="IPFS CID for your avatar (optional)"
+                style={{ width: "100%", fontSize: "15px" }}
               />
             </Box>
 
             <Box>
-              <Text size="2" weight="bold" mb="2">Bio</Text>
+              <Text size="2" weight="bold" mb="2" style={{ color: "var(--text-primary)" }}>
+                Bio
+              </Text>
               <textarea
                 className="input-modern"
                 value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                onChange={(e: any) => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Tell us about yourself"
                 rows={4}
-                style={{ resize: "vertical", fontFamily: "var(--font-sans)" }}
+                style={{ 
+                  width: "100%", 
+                  fontSize: "15px",
+                  resize: "vertical",
+                  fontFamily: "var(--font-body)",
+                }}
+              />
+            </Box>
+
+            <Box>
+              <Text size="2" weight="bold" mb="2" style={{ color: "var(--text-primary)" }}>
+                Theme
+              </Text>
+              <input
+                className="input-modern"
+                value={formData.theme}
+                onChange={(e: any) => setFormData({ ...formData, theme: e.target.value })}
+                placeholder="dark, light, etc."
+                style={{ width: "100%", fontSize: "15px" }}
               />
             </Box>
 
@@ -711,7 +801,7 @@ export const Dashboard = () => {
               className="btn-primary"
               onClick={handleCreateProfile}
               disabled={isLoading}
-              style={{
+              style={{ 
                 fontSize: "15px",
                 padding: "14px 28px",
                 marginTop: "var(--space-3)",
@@ -723,7 +813,7 @@ export const Dashboard = () => {
           </Flex>
         </div>
       ) : (
-        <>
+        <Flex direction="column" gap="5">
           {profiles?.data?.map((profile) => (
             <ProfileCard
               key={profile.data?.objectId}
@@ -734,50 +824,50 @@ export const Dashboard = () => {
               isLoading={isLoading}
             />
           ))}
+        </Flex>
+      )}
 
-          {/* Similar Profiles */}
-          {currentProfileTags.length > 0 && similarProfiles && similarProfiles.length > 0 && (
-            <Box mt="7">
-              <Heading size="6" mb="4" className="text-gradient-grape" style={{ fontWeight: 700 }}>
-                🌟 Recommended Profiles
-              </Heading>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                gap: "var(--space-4)",
-              }}>
-                {similarProfiles.map((profile: any) => {
-                  const content = profile.data?.content as any;
-                  const fields = content?.fields;
-                  return (
-                    <div key={profile.data?.objectId} className="card-modern" style={{ padding: "var(--space-5)" }}>
-                      <Heading size="4" mb="2" style={{ fontWeight: 600 }}>
-                        {fields?.name || "Anonymous"}
-                      </Heading>
-                      <Text size="2" color="gray" mb="3">
-                        {fields?.bio || "No bio"}
-                      </Text>
-                      <Flex gap="2" wrap="wrap" mb="3">
-                        {profile.matchingTags.map((tag: string) => (
-                          <div key={tag} className="badge-mint" style={{ fontSize: "11px" }}>
-                            {tag}
-                          </div>
-                        ))}
-                      </Flex>
-                      <button
-                        className="btn-primary"
-                        onClick={() => window.open(`${window.location.origin}?profile=${profile.data?.objectId}`, "_blank")}
-                        style={{ fontSize: "14px", width: "100%" }}
-                      >
-                        View Profile →
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </Box>
-          )}
-        </>
+      {/* Similar Profiles */}
+      {currentProfileTags.length > 0 && similarProfiles && similarProfiles.length > 0 && (
+        <Box mt="7">
+          <Heading size="6" mb="4" className="text-gradient-grape" style={{ fontWeight: 700 }}>
+            🌟 Recommended Profiles
+          </Heading>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "var(--space-4)",
+          }}>
+            {similarProfiles.map((profile: any) => {
+              const content = profile.data?.content as any;
+              const fields = content?.fields;
+              return (
+                <div key={profile.data?.objectId} className="card-modern" style={{ padding: "var(--space-5)" }}>
+                  <Heading size="4" mb="2" style={{ fontWeight: 600 }}>
+                    {fields?.name || "Anonymous"}
+                  </Heading>
+                  <Text size="2" color="gray" mb="3">
+                    {fields?.bio || "No bio"}
+                  </Text>
+                  <Flex gap="2" wrap="wrap" mb="3">
+                    {profile.matchingTags.map((tag: string) => (
+                      <div key={tag} className="badge-mint" style={{ fontSize: "11px" }}>
+                        {tag}
+                      </div>
+                    ))}
+                  </Flex>
+                  <button
+                    className="btn-primary"
+                    onClick={() => window.open(`${window.location.origin}?profile=${profile.data?.objectId}`, "_blank")}
+                    style={{ fontSize: "14px", width: "100%" }}
+                  >
+                    View Profile →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </Box>
       )}
     </Box>
   );
