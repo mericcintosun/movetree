@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { ConnectButton } from "@mysten/dapp-kit";
-import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
+import { Box, Container, Flex, Heading, Button, Text } from "@radix-ui/themes";
 import { Dashboard } from "./app/Dashboard";
 import { PublicProfile } from "./public/PublicProfile";
 import { LoginButtons } from "./auth/LoginButtons";
 import { RegisterEnokiWallets } from "./sui/RegisterEnokiWallets";
-import { InteractiveBackground } from "./components/InteractiveBackground";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
+import { HeroHeader } from "./components/HeroHeader";
+import { AboutUs } from "./components/AboutUs";
+import { ProblemSolution } from "./components/ProblemSolution";
+import { TeamMembers } from "./components/TeamMembers";
+import { Features } from "./components/Features";
+import { VoiceRecording } from "./components/VoiceRecording";
 import "./styles/theme.css";
 
 function App() {
-  const [currentView, setCurrentView] = useState<"dashboard" | "profile">(
-    "dashboard",
-  );
+  const [currentView, setCurrentView] = useState<"landing" | "dashboard" | "profile" | "voice">("landing");
+  const [currentSection, setCurrentSection] = useState<string>("home");
   const [profileObjectId, setProfileObjectId] = useState("");
   const [pathName, setPathName] = useState<string>("/");
 
@@ -46,146 +52,138 @@ function App() {
     handle();
   }, []);
 
-  return (
-    <>
-      <RegisterEnokiWallets />
-      
-      {/* Interactive Background */}
-      <InteractiveBackground />
-      
-      {/* Modern Glass Header */}
-      <header
-        className="glass"
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-        }}
-      >
-        <div className="container-modern">
-          <Flex
-            py="4"
-            justify="between"
-            align="center"
-            style={{ minHeight: "72px" }}
-          >
-            {/* Logo */}
-            <Box>
-              <Heading
-                size="6"
-                className="text-gradient"
-                style={{
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  cursor: "pointer",
-                }}
-                onClick={() => setCurrentView("dashboard")}
-              >
-                🌳 MoveTree
-              </Heading>
-            </Box>
+  const handleWalletConnect = () => {
+    // Redirect to dashboard when wallet connects
+    setCurrentView("dashboard");
+  };
 
-            {/* Navigation */}
-            <Flex gap="3" align="center">
-              <Flex gap="2" align="center">
-                <button
-                  className={currentView === "dashboard" ? "btn-primary" : "btn-outline"}
-                  onClick={() => setCurrentView("dashboard")}
-                  style={{
-                    fontSize: "14px",
-                    padding: "10px 20px",
-                  }}
-                >
-                  Dashboard
-                </button>
-                <button
-                  className={currentView === "profile" ? "btn-primary" : "btn-outline"}
-                  onClick={() => setCurrentView("profile")}
-                  style={{
-                    fontSize: "14px",
-                    padding: "10px 20px",
-                  }}
-                >
-                  View Profile
-                </button>
-              </Flex>
-              <LoginButtons />
-              <div style={{
-                borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
-                height: "32px",
-                margin: "0 8px",
-              }} />
-              <ConnectButton />
-            </Flex>
-          </Flex>
-        </div>
-      </header>
+  const handleNavigate = (section: string) => {
+    setCurrentSection(section);
+    if (section === "dashboard") {
+      setCurrentView("dashboard");
+    } else if (section === "voice") {
+      setCurrentView("voice");
+    } else if (section === "profile") {
+      // Show profile input form - clear any existing profile ID
+      setProfileObjectId("");
+      setCurrentView("profile");
+    } else {
+      setCurrentView("landing");
+      // Scroll to section if it's a landing page section
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
-      {/* Main Content */}
-      <main style={{
-        minHeight: "calc(100vh - 72px)",
-        position: "relative",
-        zIndex: 1,
-      }}>
-        <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
-          {currentView === "dashboard" ? (
-            <Dashboard />
-          ) : (
+  const handleGetStarted = () => {
+    setCurrentView("dashboard");
+  };
+
+  const handleVoiceProfile = () => {
+    setCurrentView("voice");
+  };
+
+  // If we're viewing a specific profile, show the profile view
+  if (currentView === "profile") {
+    return (
+      <>
+        <RegisterEnokiWallets />
+        <Navbar onNavigate={handleNavigate} currentSection={currentSection} />
+        <main style={{ minHeight: "calc(100vh - 72px)", position: "relative", zIndex: 1 }}>
+          <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
             <Box className="fade-in">
               <Box mb="5" className="card-modern" p="5">
-                <Heading size="5" mb="4" style={{ fontWeight: 600 }}>
-                  🔍 View Profile
+                                  <Heading size="5" mb="4" style={{ fontWeight: 600 }}>
+                  View Profile
                 </Heading>
                 <Flex gap="3" direction="column">
                   <input
                     className="input-modern"
                     type="text"
-                    placeholder="Enter Profile Object ID..."
+                    placeholder="Enter Profile Object ID (e.g., 0x4bacee79cd0577b370da00c1355dff5c52154e6776ccc3b8b833bab268072f1c)..."
                     value={profileObjectId}
                     onChange={(e) => setProfileObjectId(e.target.value)}
-                    style={{
-                      width: "100%",
-                      fontSize: "15px",
-                    }}
+                    style={{ width: "100%", fontSize: "15px" }}
                   />
-                  <button
-                    className="btn-primary"
-                    onClick={() => setCurrentView("profile")}
-                    disabled={!profileObjectId.trim()}
-                    style={{
-                      alignSelf: "flex-start",
-                      opacity: !profileObjectId.trim() ? 0.5 : 1,
-                      cursor: !profileObjectId.trim() ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Load Profile →
-                  </button>
+                  <Text size="2" color="gray" style={{ textAlign: "center" }}>
+                    Object ID'yi girdikten sonra profil otomatik olarak yüklenecek
+                  </Text>
                 </Flex>
               </Box>
-
               {profileObjectId && <PublicProfile objectId={profileObjectId} />}
             </Box>
-          )}
-        </Container>
-      </main>
+          </Container>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
-      {/* Footer */}
-      <footer style={{
-        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-        padding: "var(--space-5) 0",
-        textAlign: "center",
-        color: "var(--text-tertiary)",
-        fontSize: "14px",
-        position: "relative",
-        zIndex: 1,
-      }}>
-        <div className="container-modern">
-          <p style={{ margin: 0 }}>
-            Built with 💚 on <span className="text-gradient">Sui Blockchain</span>
-          </p>
-        </div>
-      </footer>
+  // If we're in dashboard mode, show the dashboard
+  if (currentView === "dashboard") {
+    return (
+      <>
+        <RegisterEnokiWallets />
+        <Navbar onNavigate={handleNavigate} currentSection={currentSection} />
+        <main style={{ minHeight: "calc(100vh - 72px)", position: "relative", zIndex: 1 }}>
+          <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
+            <Dashboard />
+          </Container>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // If we're in voice recording mode, show the voice interface
+  if (currentView === "voice") {
+    return (
+      <>
+        <RegisterEnokiWallets />
+        <Navbar onNavigate={handleNavigate} currentSection={currentSection} />
+        <main style={{ minHeight: "calc(100vh - 72px)", position: "relative", zIndex: 1 }}>
+          <Container size="4" style={{ paddingTop: "var(--space-6)", paddingBottom: "var(--space-8)" }}>
+            <VoiceRecording
+              onProfileCreated={(profileData) => {
+                // Mock profile creation - redirect to dashboard
+                alert("Sesli profil başarıyla oluşturuldu! Dashboard'a yönlendiriliyorsunuz.");
+                setCurrentView("dashboard");
+              }}
+              onClose={() => setCurrentView("dashboard")}
+            />
+          </Container>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // Landing page with all sections
+  return (
+    <>
+      <RegisterEnokiWallets />
+      <Navbar onNavigate={handleNavigate} currentSection={currentSection} />
+      
+      <main style={{ position: "relative", zIndex: 1 }}>
+        {/* Hero Section */}
+        <HeroHeader onGetStarted={handleGetStarted} onVoiceProfile={handleVoiceProfile} />
+        
+        {/* About Section */}
+        <AboutUs />
+        
+        {/* Problem & Solution Section */}
+        <ProblemSolution />
+        
+        {/* Features Section */}
+        <Features />
+        
+        {/* Team Section */}
+        <TeamMembers />
+      </main>
+      
+      <Footer />
     </>
   );
 }
