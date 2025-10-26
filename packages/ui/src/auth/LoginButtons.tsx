@@ -15,13 +15,17 @@ export function LoginButtons() {
   const wallets = useWallets();
 
   const isConnectedViaGoogleZklogin = () => {
+    // En güvenilir sinyal: Enoki zkLogin hesabı JWT sağlar
+    const jwt = (currentAccount as any)?.jwt;
+    if (jwt) return true;
+
+    // Geriye dönük/ikincil kontrol (daha zayıf): ortamda Enoki Google cüzdanı yüklü mü
     if (!currentAccount) return false;
     const enokiWallets = wallets.filter(isEnokiWallet);
     const googleWallet = enokiWallets.find(
-      (w) => w.provider === "google" || w.name?.includes("Google"),
+      (w) => (w as any).provider === "google" || (w as any).name?.includes("Google"),
     );
-
-    return !!googleWallet && currentAccount.address !== undefined;
+    return !!googleWallet && currentAccount.address !== undefined && Boolean(jwt);
   };
 
   const handleGoogleLogin = async () => {

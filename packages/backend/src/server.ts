@@ -202,6 +202,13 @@ app.post("/api/enoki/execute", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT ?? 3001, () =>
-  console.log(`Enoki backend listening on :${process.env.PORT ?? 3001}`)
+// Simple health check for load balancers and debugging
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+const PORT = Number(process.env.PORT ?? 3001);
+const HOST = process.env.HOST ?? "0.0.0.0";
+app.listen(PORT, HOST, () =>
+  console.log(`Enoki backend listening on http://${HOST}:${PORT}`)
 );

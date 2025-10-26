@@ -1,7 +1,7 @@
 lockfileVersion: '9.0'
 
 settings:
-  autoInstallPeers: false
+  autoInstallPeers: true
   excludeLinksFromLockfile: false
 
 overrides:
@@ -614,6 +614,7 @@ packages:
   '@gql.tada/cli-utils@1.7.1':
     resolution: {integrity: sha512-wg5ysZNQxtNQm67T3laVWmZzLpGb7QfyYWZdaUD2r1OjDj5Bgftq7eQlplmH+hsdffjuUyhJw/b5XAjeE2mJtg==}
     peerDependencies:
+      '@0no-co/graphqlsp': ^1.12.13
       '@gql.tada/svelte-support': 1.0.1
       '@gql.tada/vue-support': 1.0.1
       graphql: ^15.5.0 || ^16.0.0 || ^17.0.0
@@ -3342,7 +3343,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@gql.tada/cli-utils@1.7.1(graphql@16.11.0)(typescript@5.9.3)':
+  '@gql.tada/cli-utils@1.7.1(@0no-co/graphqlsp@1.15.0(graphql@16.11.0)(typescript@5.9.3))(graphql@16.11.0)(typescript@5.9.3)':
     dependencies:
       '@0no-co/graphqlsp': 1.15.0(graphql@16.11.0)(typescript@5.9.3)
       '@gql.tada/internal': 1.0.8(graphql@16.11.0)(typescript@5.9.3)
@@ -5210,7 +5211,7 @@ snapshots:
     dependencies:
       '@0no-co/graphql.web': 1.2.0(graphql@16.11.0)
       '@0no-co/graphqlsp': 1.15.0(graphql@16.11.0)(typescript@5.9.3)
-      '@gql.tada/cli-utils': 1.7.1(graphql@16.11.0)(typescript@5.9.3)
+      '@gql.tada/cli-utils': 1.7.1(@0no-co/graphqlsp@1.15.0(graphql@16.11.0)(typescript@5.9.3))(graphql@16.11.0)(typescript@5.9.3)
       '@gql.tada/internal': 1.0.8(graphql@16.11.0)(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
