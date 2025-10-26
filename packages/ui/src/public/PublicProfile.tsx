@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Box, Card, Flex, Heading, Text, Button, Badge, Avatar } from "@radix-ui/themes";
 import { useProfile } from "../sui/queries";
 import { 
   getAnalytics, 
@@ -21,8 +20,6 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
   const links = (profileData?.links || []).filter(
     (url: string) => url && url.trim() !== "",
   );
-  // Note: link_labels will be available after contract deployment
-  // const linkLabels = profileData?.link_labels || [];
   const tags = profileData?.tags || [];
 
   // Load analytics from Firebase
@@ -45,7 +42,6 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
       await incrementProfileView(objectId);
       setViewIncremented(true);
       
-      // Reload analytics
       const updated = await getAnalytics(objectId);
       setAnalytics(updated);
     };
@@ -54,34 +50,21 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
   }, [objectId, viewIncremented]);
 
   const handleLinkClick = async (url: string, index: number) => {
-    console.log(`Link clicked: ${url} (index: ${index})`);
     setClickingIndex(index);
     
-    // Ensure URL has proper protocol
     let finalUrl = url.trim();
     if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
       finalUrl = 'https://' + finalUrl;
     }
     
-    console.log(`Opening URL: ${finalUrl}`);
-    
-    // Always open the link first, regardless of analytics
     window.open(finalUrl, "_blank", "noopener,noreferrer");
     
     try {
-      // Track click in Firebase (non-blocking)
-      console.log(`Tracking click for profile: ${objectId}, link index: ${index}`);
       await incrementLinkClick(objectId, index);
-      console.log('Click tracked successfully');
-      
-      // Reload analytics
       const updated = await getAnalytics(objectId);
-      console.log('Reloaded analytics:', updated);
       setAnalytics(updated);
-      console.log('Analytics updated successfully');
     } catch (error) {
       console.warn("Failed to record click (link still opened):", error);
-      // Don't prevent link opening - analytics is optional
     } finally {
       setClickingIndex(null);
     }
@@ -89,17 +72,22 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
 
   if (isLoading) {
     return (
-      <Box p="4">
-        <Text>Loading profile...</Text>
-      </Box>
+      <div className="apple-text-center apple-p-8">
+        <div className="apple-flex apple-flex-center apple-gap-3">
+          <div className="apple-loading"></div>
+          <p className="apple-text-base">Loading profile...</p>
+        </div>
+      </div>
     );
   }
 
   if (error || !profile?.data?.content) {
     return (
-      <Box p="4">
-        <Text color="red">Profile not found</Text>
-      </Box>
+      <div className="apple-text-center apple-p-8">
+        <div className="apple-card apple-p-6" style={{ backgroundColor: "var(--apple-badge-error)", color: "white" }}>
+          <p className="apple-text-base">Profile not found</p>
+        </div>
+      </div>
     );
   }
 
@@ -107,95 +95,120 @@ export const PublicProfile = ({ objectId }: PublicProfileProps) => {
     ? `https://ipfs.io/ipfs/${profileData.avatar_cid}`
     : undefined;
 
-  console.log("Profile data:", profileData);
-  console.log("Links:", links);
-  console.log("Analytics:", analytics);
-
   return (
-    <Box p="4" style={{ maxWidth: 600, margin: "0 auto" }}>
-      <Card>
-        <Flex direction="column" align="center" gap="4" p="4">
+    <div className="apple-animate-fade-in" style={{ maxWidth: "500px", margin: "0 auto" }}>
+      <div className="apple-card apple-card-elevated apple-p-8">
+        <div className="apple-flex-column apple-flex-center apple-gap-6">
           {/* Avatar with View Count */}
-          <Flex direction="column" align="center" gap="2">
-            <Avatar
-              size="8"
-              src={avatarUrl}
-              fallback={profileData?.name?.charAt(0) || "?"}
-              radius="full"
-            />
-            <Badge size="2" color="blue" radius="full">
+          <div className="apple-flex-column apple-flex-center apple-gap-3">
+            <div style={{
+              width: "120px",
+              height: "120px",
+              borderRadius: "50%",
+              background: avatarUrl ? `url(${avatarUrl})` : "linear-gradient(135deg, var(--primary), var(--apple-blue-light))",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "48px",
+              fontWeight: "600",
+              color: "white",
+              boxShadow: "var(--shadow-lg)",
+              border: "4px solid var(--surface-elevated)"
+            }}>
+              {!avatarUrl && (profileData?.name?.charAt(0) || "?")}
+            </div>
+            <div className="apple-badge apple-badge-primary">
               👁️ {analytics?.profileViews || 0} views
-            </Badge>
-          </Flex>
+            </div>
+          </div>
 
           {/* Name */}
-          <Heading size="6">{profileData?.name || "Anonymous"}</Heading>
+          <h1 className="apple-heading-2 apple-text-center">
+            {profileData?.name || "Anonymous"}
+          </h1>
 
           {/* Bio */}
           {profileData?.bio && (
-            <Text size="3" color="gray" align="center">
+            <p className="apple-text-large apple-text-center" style={{ color: "var(--text-secondary)" }}>
               {profileData.bio}
-            </Text>
+            </p>
           )}
 
           {/* Tags */}
           {tags.length > 0 && (
-            <Flex gap="2" wrap="wrap" justify="center">
+            <div className="apple-flex apple-flex-wrap apple-gap-2 apple-flex-center">
               {tags.map((tag: string) => (
-                <Badge key={tag} size="2" color="purple">
+                <div key={tag} className="apple-badge apple-badge-secondary">
                   {tag}
-                </Badge>
+                </div>
               ))}
-            </Flex>
+            </div>
           )}
 
           {/* Links */}
-          <Flex direction="column" gap="2" style={{ width: "100%" }}>
+          <div className="apple-flex-column apple-gap-3 apple-w-full">
             {links.length > 0 ? (
               links.map((url: string, index: number) => {
                 const clicks = analytics?.linkClicks?.[index] || 0;
-                // For now, show URL as label until new contract is deployed
                 const label = url;
                 
                 return (
-                  <Box key={index} style={{ position: "relative" }}>
-                    <Button
-                      size="3"
-                      style={{ width: "100%" }}
+                  <div key={index} style={{ position: "relative" }}>
+                    <button
+                      className="apple-button apple-button-primary apple-w-full"
+                      style={{ 
+                        padding: "var(--space-4) var(--space-6)",
+                        fontSize: "var(--font-size-lg)",
+                        borderRadius: "var(--radius-xl)",
+                        position: "relative",
+                        overflow: "hidden"
+                      }}
                       onClick={() => handleLinkClick(url, index)}
                       disabled={clickingIndex === index}
                     >
-                      {clickingIndex === index ? "Opening..." : label}
-                    </Button>
-                    <Badge 
-                      color="gray" 
-                      variant="soft" 
-                      size="1"
+                      {clickingIndex === index ? (
+                        <>
+                          <div className="apple-loading"></div>
+                          Opening...
+                        </>
+                      ) : (
+                        label
+                      )}
+                    </button>
+                    <div 
+                      className="apple-badge apple-badge-secondary"
                       style={{ 
                         position: "absolute", 
-                        top: "8px", 
-                        right: "12px",
-                        pointerEvents: "none"
+                        top: "var(--space-2)", 
+                        right: "var(--space-3)",
+                        pointerEvents: "none",
+                        fontSize: "var(--font-size-xs)"
                       }}
                     >
                       {clicks} clicks
-                    </Badge>
-                  </Box>
+                    </div>
+                  </div>
                 );
               })
             ) : (
-              <Text size="2" color="gray" align="center">
-                No links available
-              </Text>
+              <div className="apple-text-center apple-p-6">
+                <p className="apple-text-base" style={{ color: "var(--text-tertiary)" }}>
+                  No links available
+                </p>
+              </div>
             )}
-          </Flex>
+          </div>
 
           {/* Theme indicator */}
-          <Text size="1" color="gray">
-            Theme: {profileData?.theme || "default"} | Powered by MoveTree on Sui 🌳
-          </Text>
-        </Flex>
-      </Card>
-    </Box>
+          <div className="apple-text-center">
+            <p className="apple-text-xs" style={{ color: "var(--text-tertiary)" }}>
+              Theme: {profileData?.theme || "default"} | Powered by MoveTree on Sui 🌳
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };

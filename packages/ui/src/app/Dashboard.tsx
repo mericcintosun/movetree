@@ -1,15 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Button,
-  Card,
-  Flex,
-  Heading,
-  Text,
-  TextField,
-  TextArea,
-  Badge,
-} from "@radix-ui/themes";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useProfileTransactions } from "../sui/tx";
 import { useOwnedProfiles, useSimilarProfiles } from "../sui/queries";
@@ -41,7 +30,7 @@ const POPULAR_TAGS = [
   "Entrepreneur",
 ];
 
-// Separate component to avoid hook ordering issues
+// Apple-style Profile Card Component
 const ProfileCard = ({ 
   profile, 
   onUpdateLinks, 
@@ -54,11 +43,6 @@ const ProfileCard = ({
   
   // Use Firebase analytics instead of blockchain
   const { analytics, refreshAnalytics } = useFirebaseAnalytics(profileId);
-  
-  // Debug analytics data (reduced logging)
-  if (analytics && analytics.linkClicks) {
-    console.log("Analytics loaded - Link clicks:", analytics.linkClicks);
-  }
   
   // Auto-sync to blockchain every 2 days
   const { isSyncing, performSync } = useBlockchainSync();
@@ -74,9 +58,6 @@ const ProfileCard = ({
     profileData?.tags || []
   );
 
-  // Debug links count (reduced logging)
-  // console.log("Links count:", links.length);
-
   // Update links when profile data changes
   useEffect(() => {
     if (existingLinks.length > 0) {
@@ -84,7 +65,7 @@ const ProfileCard = ({
     }
   }, [JSON.stringify(existingLinks)]);
 
-  // Initialize Firebase analytics if needed (safe initialization)
+  // Initialize Firebase analytics if needed
   useEffect(() => {
     if (!profileId || existingLinks.length === 0) return;
 
@@ -99,33 +80,22 @@ const ProfileCard = ({
     })();
   }, [profileId, JSON.stringify(existingLinks), refreshAnalytics]);
 
-  // Refresh analytics when component becomes visible (user returns from PublicProfile)
+  // Refresh analytics when component becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && profileId) {
-        console.log("Page became visible, refreshing analytics...");
         refreshAnalytics();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Also refresh on focus (when user switches back to tab)
-    const handleFocus = () => {
-      if (profileId) {
-        console.log("Page focused, refreshing analytics...");
-        refreshAnalytics();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', handleVisibilityChange);
     };
   }, [profileId, refreshAnalytics]);
-
 
   const addLink = () => {
     setLinks([...links, { label: "", url: "", icon: "" }]);
@@ -150,301 +120,260 @@ const ProfileCard = ({
   };
 
   return (
-    <Card>
-      {/* Analytics Badge - GitHub style */}
-      <Flex justify="between" align="center" mb="3">
-        <Heading size="4">
+    <div className="apple-card apple-card-elevated apple-p-6 apple-animate-scale-in">
+      {/* Header with Analytics */}
+      <div className="apple-flex apple-flex-between apple-mb-6">
+        <h3 className="apple-heading-3">
           {profileData?.name || "Unnamed Profile"}
-        </Heading>
-        <Badge size="2" color="blue" radius="full">
+        </h3>
+        <div className="apple-badge apple-badge-primary">
           👁️ {analytics?.profileViews ?? 0} views
-        </Badge>
-      </Flex>
+        </div>
+      </div>
 
-      <Text size="2" mb="3">
+      <p className="apple-text-base apple-mb-4">
         {profileData?.bio || "No bio"}
-      </Text>
+      </p>
 
-      <Text size="1" color="gray" mb="3">
+      <p className="apple-text-xs apple-mb-6" style={{ color: "var(--text-tertiary)" }}>
         Object ID: {profileId}
-      </Text>
+      </p>
 
-      <Flex direction="column" gap="3">
-        <Box>
-          <Text size="2" weight="bold" mb="2">
+      <div className="apple-flex-column apple-gap-6">
+        {/* Links Section */}
+        <div>
+          <h4 className="apple-text-large apple-mb-4" style={{ fontWeight: 600 }}>
             Links
-          </Text>
-          {links.map((link, index) => (
-            <Flex key={index} gap="2" mb="2" align="center">
-              <TextField.Root
-                placeholder="Label"
-                value={link.label}
-                onChange={(e: any) =>
-                  updateLink(index, "label", e.target.value)
-                }
-                size="1"
-              />
-              <TextField.Root
-                placeholder="https://example.com"
-                value={link.url}
-                onChange={(e: any) =>
-                  updateLink(index, "url", e.target.value)
-                }
-                size="1"
-              />
-              <TextField.Root
-                placeholder="Icon (optional)"
-                value={link.icon || ""}
-                onChange={(e: any) =>
-                  updateLink(index, "icon", e.target.value)
-                }
-                size="1"
-              />
-              {/* Show click count */}
-              <Badge color="gray" variant="soft">
-                {analytics?.linkClicks?.[index] ?? 0} clicks
-              </Badge>
-              <Button
-                size="1"
-                color="red"
-                onClick={() => removeLink(index)}
-              >
-                Remove
-              </Button>
-            </Flex>
-          ))}
-          <Button size="1" onClick={addLink} mb="2">
-            Add Link
-          </Button>
-          <Button
-            size="1"
-            onClick={() => onUpdateLinks(profileId, links)}
-            disabled={isLoading}
-          >
-            {isLoading ? "Updating..." : "Update Links"}
-          </Button>
-          
-          {/* Debug: Test analytics */}
-          <Button
-            size="1"
-            variant="outline"
-            onClick={async () => {
-              console.log("Testing analytics...");
-              try {
-                // Test incrementLinkClick
-                await incrementLinkClick(profileId, 0);
-                console.log("Test click recorded");
-                
-                // Reload analytics
-                const updated = await getAnalytics(profileId);
-                console.log("Updated analytics:", updated);
-                
-                // Force refresh using hook
-                refreshAnalytics();
-              } catch (error) {
-                console.error("Analytics test failed:", error);
-              }
-            }}
-          >
-            Test Analytics
-          </Button>
-          
-          {/* Debug: Test Firebase connection */}
-          <Button
-            size="1"
-            variant="outline"
-            onClick={async () => {
-              console.log("Testing Firebase connection...");
-              try {
-                // Test basic Firebase write
-                const testData = {
-                  test: true,
-                  timestamp: new Date().toISOString(),
-                  profileId: profileId
-                };
-                
-                const testDoc = doc(db, "test", "connection");
-                await setDoc(testDoc, testData);
-                console.log("✅ Firebase write test successful");
-                
-                // Test read
-                const testSnap = await getDoc(testDoc);
-                console.log("✅ Firebase read test successful:", testSnap.data());
-                
-              } catch (error) {
-                console.error("❌ Firebase test failed:", error);
-                console.error("Error details:", {
-                  code: error.code,
-                  message: error.message,
-                  stack: error.stack
-                });
-              }
-            }}
-          >
-            Test Firebase
-          </Button>
-          
-          {/* Manual analytics refresh */}
-          <Button
-            size="1"
-            variant="outline"
-            onClick={() => {
-              console.log("Manually refreshing analytics...");
-              refreshAnalytics();
-            }}
-          >
-            Refresh Analytics
-          </Button>
-        </Box>
-
-        {/* Analytics Chart - Simple Bar Graph */}
-        {analytics && (
-          <Box>
-            <Text size="2" weight="bold" mb="2">
-              📊 Link Performance
-            </Text>
-            <Box
-              style={{
-                background: "var(--gray-3)",
-                padding: "12px",
-                borderRadius: "8px",
-              }}
+          </h4>
+          <div className="apple-flex-column apple-gap-3">
+            {links.map((link, index) => (
+              <div key={index} className="apple-link-form-row apple-flex apple-gap-3">
+                <div className="apple-link-inputs apple-flex apple-gap-2">
+                  <input
+                    className="apple-input"
+                    placeholder="Label"
+                    value={link.label}
+                    onChange={(e) => updateLink(index, "label", e.target.value)}
+                  />
+                  <input
+                    className="apple-input"
+                    placeholder="https://example.com"
+                    value={link.url}
+                    onChange={(e) => updateLink(index, "url", e.target.value)}
+                  />
+                  <input
+                    className="apple-input"
+                    placeholder="Icon (optional)"
+                    value={link.icon || ""}
+                    onChange={(e) => updateLink(index, "icon", e.target.value)}
+                  />
+                </div>
+                <div className="apple-flex apple-gap-2 apple-flex-center">
+                  <div className="apple-badge apple-badge-secondary">
+                    {analytics?.linkClicks?.[index] ?? 0} clicks
+                  </div>
+                  <button
+                    className="apple-button apple-button-small"
+                    style={{ 
+                      backgroundColor: "var(--apple-badge-error)",
+                      color: "white",
+                      border: "none"
+                    }}
+                    onClick={() => removeLink(index)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="apple-flex apple-gap-3 apple-mt-4">
+            <button className="apple-button apple-button-secondary" onClick={addLink}>
+              Add Link
+            </button>
+            <button
+              className="apple-button apple-button-primary"
+              onClick={() => onUpdateLinks(profileId, links)}
+              disabled={isLoading}
             >
-              {analytics.linkClicks && analytics.linkClicks.length > 0 ? (
-                links.map((link, index) => {
-                  const clicks = analytics.linkClicks[index] || 0;
-                  const maxClicks = Math.max(...analytics.linkClicks, 1);
-                  const percentage = (clicks / maxClicks) * 100;
-                  
-                  return (
-                    <Box key={index} mb="2">
-                      <Flex justify="between" mb="1">
-                        <Text size="1" color="gray">
-                          {link.label || link.url.slice(0, 30)}...
-                        </Text>
-                        <Text size="1" weight="bold">
-                          {clicks} clicks
-                        </Text>
-                      </Flex>
-                      <Box
-                        style={{
-                          height: "8px",
-                          background: "var(--gray-5)",
-                          borderRadius: "4px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          style={{
-                            height: "100%",
-                            width: `${percentage}%`,
-                            background: "var(--blue-9)",
-                            transition: "width 0.3s ease",
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  );
-                })
+              {isLoading ? (
+                <>
+                  <div className="apple-loading"></div>
+                  Updating...
+                </>
               ) : (
-                <Text size="2" color="gray" align="center">
-                  No click data yet. Share your profile to see analytics!
-                </Text>
+                "Update Links"
               )}
-            </Box>
-          </Box>
+            </button>
+          </div>
+        </div>
+
+        {/* Analytics Chart */}
+        {analytics && (
+          <div>
+            <h4 className="apple-text-large apple-mb-4" style={{ fontWeight: 600 }}>
+              📊 Link Performance
+            </h4>
+            <div className="apple-card apple-p-4">
+              {analytics.linkClicks && analytics.linkClicks.length > 0 ? (
+                <div className="apple-flex-column apple-gap-3">
+                  {links.map((link, index) => {
+                    const clicks = analytics.linkClicks[index] || 0;
+                    const maxClicks = Math.max(...analytics.linkClicks, 1);
+                    const percentage = (clicks / maxClicks) * 100;
+                    
+                    return (
+                      <div key={index}>
+                        <div className="apple-flex apple-flex-between apple-mb-2">
+                          <span className="apple-text-small">
+                            {link.label || link.url.slice(0, 30)}...
+                          </span>
+                          <span className="apple-text-small" style={{ fontWeight: 600 }}>
+                            {clicks} clicks
+                          </span>
+                        </div>
+                        <div style={{
+                          height: "8px",
+                          backgroundColor: "var(--border-light)",
+                          borderRadius: "var(--radius-sm)",
+                          overflow: "hidden",
+                        }}>
+                          <div
+                            style={{
+                              height: "100%",
+                              width: `${percentage}%`,
+                              background: "linear-gradient(90deg, var(--primary), var(--apple-blue-light))",
+                              transition: "width var(--transition-normal)",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="apple-text-base apple-text-center" style={{ color: "var(--text-tertiary)" }}>
+                  No click data yet. Share your profile to see analytics!
+                </p>
+              )}
+            </div>
+          </div>
         )}
 
-        <Box>
-          <Text size="2" weight="bold" mb="2">
-            Interest Tags (for networking)
-          </Text>
+        {/* Tags Section */}
+        <div>
+          <h4 className="apple-text-large apple-mb-4" style={{ fontWeight: 600 }}>
+            Interest Tags
+          </h4>
           
           {/* Selected tags display */}
           {selectedTags.length > 0 && (
-            <Flex gap="2" wrap="wrap" mb="3">
+            <div className="apple-flex apple-flex-wrap apple-gap-2 apple-mb-4">
               {selectedTags.map((tag) => (
-                <Badge key={tag} size="2" color="blue">
+                <div key={tag} className="apple-badge apple-badge-primary">
                   {tag}
-                </Badge>
+                </div>
               ))}
-            </Flex>
+            </div>
           )}
 
           {/* Available tags */}
-          <Text size="1" color="gray" mb="1">
+          <p className="apple-text-small apple-mb-3" style={{ color: "var(--text-tertiary)" }}>
             Select your interests (click to toggle):
-          </Text>
-          <Flex gap="1" wrap="wrap" mb="3">
+          </p>
+          <div className="apple-flex apple-flex-wrap apple-gap-2 apple-mb-4">
             {POPULAR_TAGS.map((tag) => (
-              <Badge
+              <button
                 key={tag}
-                size="1"
-                color={selectedTags.includes(tag) ? "green" : "gray"}
+                className={`apple-badge ${
+                  selectedTags.includes(tag) ? "apple-badge-success" : "apple-badge-secondary"
+                } apple-pointer`}
                 onClick={() => toggleTag(tag)}
-                style={{ cursor: "pointer" }}
               >
                 {tag}
-              </Badge>
+              </button>
             ))}
-          </Flex>
+          </div>
 
-          <Button
-            size="1"
+          <button
+            className="apple-button apple-button-secondary"
             onClick={() => onUpdateTags(profileId, selectedTags)}
             disabled={isLoading}
-            color="purple"
           >
-            Update Tags
-          </Button>
-        </Box>
+            {isLoading ? (
+              <>
+                <div className="apple-loading"></div>
+                Updating...
+              </>
+            ) : (
+              "Update Tags"
+            )}
+          </button>
+        </div>
 
         {/* Blockchain Sync Status */}
-        <Box>
-          <Flex justify="between" align="center" mb="2">
-            <Text size="2" weight="bold">
+        <div>
+          <div className="apple-flex apple-flex-between apple-mb-3">
+            <h4 className="apple-text-large" style={{ fontWeight: 600 }}>
               Blockchain Sync
-            </Text>
-            <Badge color={isSyncing ? "orange" : "green"} variant="soft">
+            </h4>
+            <div className={`apple-badge ${
+              isSyncing ? "apple-badge-warning" : "apple-badge-success"
+            }`}>
               {isSyncing ? "Syncing..." : "Up to date"}
-            </Badge>
-          </Flex>
-          <Text size="1" color="gray" mb="2">
+            </div>
+          </div>
+          <p className="apple-text-small apple-mb-3" style={{ color: "var(--text-tertiary)" }}>
             Analytics auto-sync to blockchain every 2 days
-          </Text>
-          <Button
-            size="1"
-            variant="outline"
+          </p>
+          <button
+            className="apple-button apple-button-secondary"
             onClick={performSync}
             disabled={isSyncing}
           >
-            {isSyncing ? "Syncing..." : "Force Sync Now"}
-          </Button>
-        </Box>
+            {isSyncing ? (
+              <>
+                <div className="apple-loading"></div>
+                Syncing...
+              </>
+            ) : (
+              "Force Sync Now"
+            )}
+          </button>
+        </div>
 
-        <Box>
-          <Button
-            size="1"
-            color="red"
+        {/* Delete Profile */}
+        <div>
+          <button
+            className="apple-button apple-button-small"
+            style={{ 
+              backgroundColor: "var(--apple-badge-error)",
+              color: "white",
+              border: "none"
+            }}
             onClick={() => onDeleteProfile(profileId)}
             disabled={isLoading}
           >
-            {isLoading ? "Deleting..." : "Delete Profile"}
-          </Button>
-        </Box>
-      </Flex>
-    </Card>
+            {isLoading ? (
+              <>
+                <div className="apple-loading"></div>
+                Deleting...
+              </>
+            ) : (
+              "Delete Profile"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
 export const Dashboard = () => {
-  // 1) TÜM hook'lar en üste - erken return'den önce!
   const account = useCurrentAccount();
   const { createProfile, updateLinks, updateTags, deleteProfile } =
     useProfileTransactions();
   const { data: profiles, refetch, isLoading: profilesLoading, error: profilesError } = useOwnedProfiles(account?.address || "");
-
-  // Loading timeout removed - not needed anymore
 
   const [formData, setFormData] = useState({
     name: "",
@@ -455,14 +384,12 @@ export const Dashboard = () => {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Debug logs removed for cleaner console
-
   // Get current profile's tags for similarity matching
   const currentProfileData = profiles?.data?.[0]?.data?.content as any;
   const currentProfileTags = currentProfileData?.fields?.tags || [];
   const currentProfileId = profiles?.data?.[0]?.data?.objectId;
 
-  // Get similar profiles - hook'lar erken return'den önce!
+  // Get similar profiles
   const { data: similarProfiles, refetch: refetchSimilarProfiles } = useSimilarProfiles(
     currentProfileTags,
     currentProfileId
@@ -474,7 +401,6 @@ export const Dashboard = () => {
       return;
     }
 
-    // Form validation
     if (!formData.name.trim()) {
       alert("Please enter a name");
       return;
@@ -489,7 +415,6 @@ export const Dashboard = () => {
         formData.theme,
       );
       await refetch();
-      // Don't clear form - let user see the created profile
       alert("Profile created successfully!");
     } catch (error) {
       console.error("Failed to create profile:", error);
@@ -502,19 +427,13 @@ export const Dashboard = () => {
   const handleUpdateLinks = async (profileId: string, links: LinkItem[]) => {
     setIsLoading(true);
     try {
-      // Debug log removed
-      
-      // Update blockchain (updateLinks will filter empty URLs)
       await updateLinks(profileId, links);
       
-      // Get filtered URLs for Firebase cache
       const urls = links
         .map(l => l.url)
         .filter(url => url && url.trim() !== "");
       
-      // Update Firebase cache with filtered URLs
       await updateAnalyticsLinks(profileId, urls);
-      
       await refetch();
       alert("✅ Links updated successfully!");
     } catch (error) {
@@ -530,7 +449,7 @@ export const Dashboard = () => {
     try {
       await updateTags(profileId, tags);
       await refetch();
-      await refetchSimilarProfiles(); // Refresh similar profiles
+      await refetchSimilarProfiles();
       alert("✅ Tags updated successfully on blockchain!");
     } catch (error) {
       console.error("Failed to update tags:", error);
@@ -561,108 +480,120 @@ export const Dashboard = () => {
     }
   };
 
-
-
-  // 2) Erken return şimdi hook'lardan SONRA geliyor → güvenli
   if (!account) {
     return (
-      <Box p="4">
-        <Heading>Connect your wallet to create your LinkTree profile</Heading>
-      </Box>
+      <div className="apple-text-center apple-p-8">
+        <h1 className="apple-heading-2 apple-mb-4">Connect your wallet to create your LinkTree profile</h1>
+        <p className="apple-text-large" style={{ color: "var(--text-secondary)" }}>
+          Connect your Sui wallet to get started with MoveTree
+        </p>
+      </div>
     );
   }
 
   if (profilesLoading) {
     return (
-      <Box p="4">
-        <Heading mb="4">LinkTree Dashboard</Heading>
-        <Text>Loading your profiles...</Text>
-      </Box>
+      <div className="apple-text-center apple-p-8">
+        <h1 className="apple-heading-2 apple-mb-4">LinkTree Dashboard</h1>
+        <div className="apple-flex apple-flex-center apple-gap-3">
+          <div className="apple-loading"></div>
+          <p className="apple-text-base">Loading your profiles...</p>
+        </div>
+      </div>
     );
   }
 
-  // If no package ID is set, show a warning
   if (!import.meta.env.VITE_PACKAGE_ID) {
     return (
-      <Box p="4">
-        <Heading mb="4">LinkTree Dashboard</Heading>
-        <Text color="red">
-          ⚠️ VITE_PACKAGE_ID environment variable is not set. Please configure it in your .env.local file.
-        </Text>
-      </Box>
+      <div className="apple-text-center apple-p-8">
+        <h1 className="apple-heading-2 apple-mb-4">LinkTree Dashboard</h1>
+        <div className="apple-card apple-p-6" style={{ backgroundColor: "var(--apple-badge-error)", color: "white" }}>
+          <p className="apple-text-base">
+            ⚠️ VITE_PACKAGE_ID environment variable is not set. Please configure it in your .env.local file.
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box p="4">
-      <Heading mb="4">LinkTree Dashboard</Heading>
+    <div className="apple-animate-fade-in">
+      <h1 className="apple-heading-2 apple-mb-8 apple-text-center">LinkTree Dashboard</h1>
 
       {(!profiles?.data || profiles.data.length === 0 || profilesError) ? (
-        <Card>
-          <Heading size="4" mb="4">
+        <div className="apple-card apple-card-elevated apple-p-8" style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2 className="apple-heading-3 apple-mb-6 apple-text-center">
             Create Your Profile
-          </Heading>
-          <Flex direction="column" gap="3">
-            <Box>
-              <Text size="2" weight="bold" mb="1">
+          </h2>
+          <div className="apple-flex-column apple-gap-4">
+            <div>
+              <label className="apple-text-base apple-mb-2" style={{ fontWeight: 600, display: "block" }}>
                 Name
-              </Text>
-              <TextField.Root
+              </label>
+              <input
+                className="apple-input"
                 value={formData.name}
-                onChange={(e: any) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Your name"
               />
-            </Box>
+            </div>
 
-            <Box>
-              <Text size="2" weight="bold" mb="1">
+            <div>
+              <label className="apple-text-base apple-mb-2" style={{ fontWeight: 600, display: "block" }}>
                 Avatar CID
-              </Text>
-              <TextField.Root
+              </label>
+              <input
+                className="apple-input"
                 value={formData.avatarCid}
-                onChange={(e: any) =>
-                  setFormData({ ...formData, avatarCid: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, avatarCid: e.target.value })}
                 placeholder="IPFS CID for your avatar"
               />
-            </Box>
+            </div>
 
-            <Box>
-              <Text size="2" weight="bold" mb="1">
+            <div>
+              <label className="apple-text-base apple-mb-2" style={{ fontWeight: 600, display: "block" }}>
                 Bio
-              </Text>
-              <TextArea
+              </label>
+              <textarea
+                className="apple-input"
                 value={formData.bio}
-                onChange={(e: any) =>
-                  setFormData({ ...formData, bio: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                 placeholder="Tell us about yourself"
                 rows={3}
+                style={{ resize: "vertical", minHeight: "80px" }}
               />
-            </Box>
+            </div>
 
-            <Box>
-              <Text size="2" weight="bold" mb="1">
+            <div>
+              <label className="apple-text-base apple-mb-2" style={{ fontWeight: 600, display: "block" }}>
                 Theme
-              </Text>
-              <TextField.Root
+              </label>
+              <input
+                className="apple-input"
                 value={formData.theme}
-                onChange={(e: any) =>
-                  setFormData({ ...formData, theme: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
                 placeholder="dark, light, etc."
               />
-            </Box>
+            </div>
 
-            <Button onClick={handleCreateProfile} disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Profile"}
-            </Button>
-          </Flex>
-        </Card>
+            <button 
+              className="apple-button apple-button-primary apple-button-large"
+              onClick={handleCreateProfile} 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <div className="apple-loading"></div>
+                  Creating...
+                </>
+              ) : (
+                "Create Profile"
+              )}
+            </button>
+          </div>
+        </div>
       ) : (
-        <Flex direction="column" gap="4">
+        <div className="apple-flex-column apple-gap-6">
           {profiles?.data?.map((profile) => (
             <ProfileCard
               key={profile.data?.objectId}
@@ -673,46 +604,46 @@ export const Dashboard = () => {
               isLoading={isLoading}
             />
           ))}
-        </Flex>
+        </div>
       )}
 
       {/* Similar Profiles Section */}
       {currentProfileTags.length > 0 && similarProfiles && similarProfiles.length > 0 && (
-        <Box mt="6">
-          <Heading size="5" mb="3">
+        <div className="apple-mt-12">
+          <h2 className="apple-heading-3 apple-mb-4 apple-text-center">
             Recommended Profiles
-          </Heading>
-          <Text size="2" color="gray" mb="3">
+          </h2>
+          <p className="apple-text-base apple-text-center apple-mb-6" style={{ color: "var(--text-secondary)" }}>
             Based on your interests: {currentProfileTags.join(", ")}
-          </Text>
-          <Flex direction="column" gap="3">
+          </p>
+          <div className="apple-grid apple-grid-2">
             {similarProfiles.map((profile: any) => {
               const content = profile.data?.content as any;
               const fields = content?.fields;
               return (
-                <Card key={profile.data?.objectId}>
-                  <Flex justify="between" align="start">
-                    <Box>
-                      <Heading size="3" mb="1">
+                <div key={profile.data?.objectId} className="apple-card apple-p-6 apple-animate-slide-up">
+                  <div className="apple-flex apple-flex-between">
+                    <div className="apple-flex-column apple-gap-3">
+                      <h3 className="apple-heading-4">
                         {fields?.name || "Anonymous"}
-                      </Heading>
-                      <Text size="2" color="gray" mb="2">
+                      </h3>
+                      <p className="apple-text-base" style={{ color: "var(--text-secondary)" }}>
                         {fields?.bio || "No bio"}
-                      </Text>
-                      <Flex gap="1" wrap="wrap" mb="2">
+                      </p>
+                      <div className="apple-flex apple-flex-wrap apple-gap-2">
                         {profile.matchingTags.map((tag: string) => (
-                          <Badge key={tag} size="1" color="green">
+                          <div key={tag} className="apple-badge apple-badge-success">
                             {tag}
-                          </Badge>
+                          </div>
                         ))}
-                      </Flex>
-                      <Text size="1" color="gray">
+                      </div>
+                      <p className="apple-text-small" style={{ color: "var(--text-tertiary)" }}>
                         {profile.matchScore} matching interest
                         {profile.matchScore > 1 ? "s" : ""}
-                      </Text>
-                    </Box>
-                    <Button
-                      size="2"
+                      </p>
+                    </div>
+                    <button
+                      className="apple-button apple-button-primary"
                       onClick={() => {
                         window.open(
                           `${window.location.origin}?profile=${profile.data?.objectId}`,
@@ -721,14 +652,14 @@ export const Dashboard = () => {
                       }}
                     >
                       View Profile
-                    </Button>
-                  </Flex>
-                </Card>
+                    </button>
+                  </div>
+                </div>
               );
             })}
-          </Flex>
-        </Box>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };

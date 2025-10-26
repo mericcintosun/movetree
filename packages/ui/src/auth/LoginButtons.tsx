@@ -6,19 +6,16 @@ import {
   useDisconnectWallet,
 } from "@mysten/dapp-kit";
 import { isEnokiWallet, EnokiWallet, AuthProvider } from "@mysten/enoki";
-import { Button, Flex, Text } from "@radix-ui/themes";
 
 export function LoginButtons() {
   const currentAccount = useCurrentAccount();
   const { mutateAsync: connectWallet } = useConnectWallet();
   const { mutateAsync: disconnectWallet } = useDisconnectWallet();
   const wallets = useWallets();
-  console.log("wallets", wallets);
+  
   const isConnectedViaGoogleZklogin = () => {
     if (!currentAccount) return false;
-    console.log("wallets", wallets);
     const enokiWallets = wallets.filter(isEnokiWallet);
-    console.log("enokiWallets", enokiWallets);
     const googleWallet = enokiWallets.find(
       (w) => w.provider === "google" || w.name?.includes("Google"),
     );
@@ -27,16 +24,12 @@ export function LoginButtons() {
   };
 
   const handleGoogleLogin = async () => {
-    console.log("handleGoogleLogin");
     try {
       if (currentAccount) {
         await disconnectWallet();
-        console.log("Disconnected existing wallet");
       }
 
-      // Find Enoki Google wallet
       const enokiWallets = wallets.filter(isEnokiWallet);
-
       const googleWallet = enokiWallets.find(
         (wallet: any) =>
           wallet.provider === "google" || wallet.name?.includes("Google"),
@@ -49,9 +42,7 @@ export function LoginButtons() {
         return;
       }
 
-      // Connect with Google zkLogin
       await connectWallet({ wallet: googleWallet });
-      console.log("Google zkLogin successful!");
     } catch (error) {
       console.error("Google zkLogin failed:", error);
       alert("Login failed: " + (error as Error).message);
@@ -61,7 +52,6 @@ export function LoginButtons() {
   const handleDisconnect = async () => {
     try {
       await disconnectWallet();
-      console.log("Wallet disconnected");
     } catch (error) {
       console.error("Disconnect failed:", error);
     }
@@ -70,47 +60,57 @@ export function LoginButtons() {
   // If connected via Google zkLogin, show connected status
   if (currentAccount && isConnectedViaGoogleZklogin()) {
     return (
-      <Flex align="center" gap="2">
-        <Text size="2" color="green">
+      <div className="apple-flex apple-flex-center apple-gap-3">
+        <div className="apple-badge apple-badge-success">
           ✓ Connected via Google zkLogin
-        </Text>
-        <Button onClick={handleDisconnect} variant="soft" color="red" size="1">
+        </div>
+        <button 
+          className="apple-button apple-button-small"
+          style={{ 
+            backgroundColor: "var(--apple-badge-error)",
+            color: "white",
+            border: "none"
+          }}
+          onClick={handleDisconnect}
+        >
           Disconnect
-        </Button>
-      </Flex>
+        </button>
+      </div>
     );
   }
 
   // If connected via another wallet, show warning and force Google login
   if (currentAccount && !isConnectedViaGoogleZklogin()) {
     return (
-      <Flex direction="column" gap="2">
-        <Text size="2" color="orange">
+      <div className="apple-flex-column apple-gap-3">
+        <div className="apple-badge apple-badge-warning">
           ⚠️ Connected with another wallet
-        </Text>
-        <Flex gap="2">
-          <Button onClick={handleGoogleLogin} variant="solid" color="blue">
+        </div>
+        <div className="apple-flex apple-gap-3">
+          <button 
+            className="apple-button apple-button-primary apple-button-small"
+            onClick={handleGoogleLogin}
+          >
             Sign in with Google zkLogin
-          </Button>
-          <Button
+          </button>
+          <button
+            className="apple-button apple-button-secondary apple-button-small"
             onClick={handleDisconnect}
-            variant="soft"
-            color="gray"
-            size="2"
           >
             Disconnect
-          </Button>
-        </Flex>
-      </Flex>
+          </button>
+        </div>
+      </div>
     );
   }
 
   // Not connected, show Google login button
   return (
-    <Flex gap="2">
-      <Button onClick={handleGoogleLogin} variant="solid" color="blue">
-        Sign in with Google zkLogin
-      </Button>
-    </Flex>
+    <button 
+      className="apple-button apple-button-primary apple-button-small"
+      onClick={handleGoogleLogin}
+    >
+      Sign in with Google zkLogin
+    </button>
   );
 }
