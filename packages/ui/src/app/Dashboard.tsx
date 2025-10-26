@@ -151,57 +151,83 @@ const TagsManager = ({ selectedTags, setSelectedTags, isLoading, onSave }: any) 
 
   return (
     <div className="card-modern" style={{ padding: "var(--space-6)" }}>
-      <Heading size="5" mb="4" style={{ fontWeight: 600 }}>
-        🏷️ Interest Tags
-      </Heading>
+      <Flex direction="column" gap="4">
+        <Heading size="5" style={{ fontWeight: 600 }}>
+          🏷️ Interest Tags
+        </Heading>
 
-      {selectedTags.length > 0 && (
-        <Flex gap="2" wrap="wrap" mb="4">
-          {selectedTags.map((tag: string) => (
-            <div key={tag} className="badge-mint" style={{ padding: "8px 14px", fontSize: "13px" }}>
-              ✓ {tag}
-            </div>
-          ))}
-        </Flex>
-      )}
-
-      <Text size="2" color="gray" mb="2">
-        Select your interests:
-      </Text>
-      <Flex gap="2" wrap="wrap" mb="4">
-        {POPULAR_TAGS.map((tag) => (
-          <div
-            key={tag}
-            onClick={() => toggleTag(tag)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: "var(--radius-full)",
-              border: selectedTags.includes(tag)
-                ? "1.5px solid var(--mint-800)"
-                : "1.5px solid var(--border-light)",
-              background: selectedTags.includes(tag)
-                ? "rgba(55, 197, 179, 0.15)"
-                : "transparent",
-              color: selectedTags.includes(tag) ? "var(--mint-700)" : "var(--text-secondary)",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all var(--transition-base)",
-            }}
-          >
-            {tag}
+        {selectedTags.length > 0 && (
+          <div style={{
+            background: "var(--bg-tertiary)",
+            padding: "var(--space-4)",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border-light)",
+          }}>
+            <Text size="2" style={{ color: "var(--text-secondary)", marginBottom: "var(--space-3)", display: "block" }}>
+              Selected Tags ({selectedTags.length}):
+            </Text>
+            <Flex gap="2" wrap="wrap">
+              {selectedTags.map((tag: string) => (
+                <div key={tag} className="badge-mint" style={{ padding: "8px 14px", fontSize: "13px" }}>
+                  ✓ {tag}
+                </div>
+              ))}
+            </Flex>
           </div>
-        ))}
-      </Flex>
+        )}
 
-      <button
-        className="btn-secondary"
-        onClick={onSave}
-        disabled={isLoading}
-        style={{ fontSize: "14px", opacity: isLoading ? 0.6 : 1 }}
-      >
-        {isLoading ? "Updating..." : "💫 Update Tags"}
-      </button>
+        <div>
+          <Text size="2" style={{ color: "var(--text-secondary)", marginBottom: "var(--space-3)", display: "block" }}>
+            Select your interests:
+          </Text>
+          <Flex gap="2" wrap="wrap">
+            {POPULAR_TAGS.map((tag) => (
+              <div
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "var(--radius-full)",
+                  border: selectedTags.includes(tag)
+                    ? "1.5px solid var(--mint-800)"
+                    : "1.5px solid var(--border-light)",
+                  background: selectedTags.includes(tag)
+                    ? "rgba(55, 197, 179, 0.15)"
+                    : "transparent",
+                  color: selectedTags.includes(tag) ? "var(--mint-700)" : "var(--text-secondary)",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all var(--transition-base)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!selectedTags.includes(tag)) {
+                    e.currentTarget.style.borderColor = "var(--border-medium)";
+                    e.currentTarget.style.background = "var(--bg-tertiary)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!selectedTags.includes(tag)) {
+                    e.currentTarget.style.borderColor = "var(--border-light)";
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
+              >
+                {tag}
+              </div>
+            ))}
+          </Flex>
+        </div>
+
+        <button
+          className="btn-secondary"
+          onClick={onSave}
+          disabled={isLoading}
+          style={{ fontSize: "14px", opacity: isLoading ? 0.6 : 1, width: "100%" }}
+        >
+          {isLoading ? "Updating..." : "💫 Update Tags"}
+        </button>
+      </Flex>
     </div>
   );
 };
@@ -312,29 +338,43 @@ const AnalyticsChart = ({ links, analytics }: any) => {
 // Blockchain Sync Component
 const BlockchainSync = ({ isSyncing, performSync }: any) => (
   <div className="card-modern" style={{ padding: "var(--space-6)" }}>
-    <Flex justify="between" align="center" mb="3">
-      <Heading size="5" style={{ fontWeight: 600 }}>
-        ⛓️ Blockchain Sync
-      </Heading>
-      <div className={isSyncing ? "badge-grape" : "badge-mint"} style={{ fontSize: "11px" }}>
-        {isSyncing ? "⏳ Syncing..." : "✓ Up to date"}
+    <Flex direction="column" gap="4">
+      <Flex justify="between" align="center">
+        <Heading size="5" style={{ fontWeight: 600 }}>
+          ⛓️ Blockchain Sync
+        </Heading>
+        <div className={isSyncing ? "badge-grape" : "badge-mint"} style={{ 
+          fontSize: "11px",
+          padding: "6px 12px",
+        }}>
+          {isSyncing ? "⏳ Syncing..." : "✓ Up to date"}
+        </div>
+      </Flex>
+      
+      <div style={{
+        background: "var(--bg-tertiary)",
+        padding: "var(--space-4)",
+        borderRadius: "var(--radius-md)",
+        border: "1px solid var(--border-light)",
+      }}>
+        <Text size="2" style={{ color: "var(--text-secondary)", marginBottom: "var(--space-3)", display: "block" }}>
+          Analytics auto-sync every 2 days
+        </Text>
+        <button
+          className="btn-outline"
+          onClick={performSync}
+          disabled={isSyncing}
+          style={{
+            fontSize: "14px",
+            opacity: isSyncing ? 0.5 : 1,
+            cursor: isSyncing ? "not-allowed" : "pointer",
+            width: "100%",
+          }}
+        >
+          {isSyncing ? "⏳ Syncing..." : "🔄 Force Sync Now"}
+        </button>
       </div>
     </Flex>
-    <Text size="2" color="gray" mb="3">
-      Analytics auto-sync every 2 days
-    </Text>
-    <button
-      className="btn-outline"
-      onClick={performSync}
-      disabled={isSyncing}
-      style={{
-        fontSize: "14px",
-        opacity: isSyncing ? 0.5 : 1,
-        cursor: isSyncing ? "not-allowed" : "pointer",
-      }}
-    >
-      {isSyncing ? "⏳ Syncing..." : "🔄 Force Sync Now"}
-    </button>
   </div>
 );
 

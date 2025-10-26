@@ -24,17 +24,21 @@
   --color-accent-dark: var(--grape-900);
   --color-accent-light: var(--grape-600);
   
-  /* Background Colors */
-  --bg-primary: #0A0A0A;
-  --bg-secondary: #141414;
-  --bg-tertiary: #1E1E1E;
-  --bg-elevated: #252525;
-  --bg-glass: rgba(255, 255, 255, 0.05);
+  /* Background Colors - Dark Rich Theme */
+  --bg-primary: #0F1419;
+  --bg-secondary: #1A1F2E;
+  --bg-tertiary: #252B3A;
+  --bg-card: rgba(26, 31, 46, 0.7);
+  --bg-glass: rgba(26, 31, 46, 0.5);
   
   /* Text Colors */
   --text-primary: #FFFFFF;
-  --text-secondary: #A0A0A0;
-  --text-tertiary: #707070;
+  --text-secondary: #B4BCD0;
+  --text-tertiary: #8792A8;
+  
+  /* Borders */
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
   
   /* Gradients - Apple-style */
   --gradient-mint: linear-gradient(135deg, var(--mint-800) 0%, var(--mint-700) 100%);
@@ -42,13 +46,13 @@
   --gradient-sunset: linear-gradient(135deg, var(--grape-700) 0%, var(--mint-700) 100%);
   --gradient-glass: linear-gradient(135deg, rgba(55, 197, 179, 0.1) 0%, rgba(197, 132, 246, 0.1) 100%);
   
-  /* Shadows - Soft, Apple-like */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 8px 0 rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 25px 0 rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 20px 40px 0 rgba(0, 0, 0, 0.6);
-  --shadow-glow-mint: 0 0 20px rgba(55, 197, 179, 0.3);
-  --shadow-glow-grape: 0 0 20px rgba(197, 132, 246, 0.3);
+  /* Shadows - Rich Dark Theme */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  --shadow-glow-mint: 0 0 30px rgba(55, 197, 179, 0.4);
+  --shadow-glow-grape: 0 0 30px rgba(197, 132, 246, 0.4);
   
   /* Border Radius - Apple's rounded corners */
   --radius-sm: 8px;
@@ -68,9 +72,8 @@
   --space-8: 64px;
   
   /* Typography */
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   
   /* Transitions - Smooth, Apple-style */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,12 +90,29 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   background: var(--bg-primary);
   color: var(--text-primary);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* Subtle Background Pattern */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Scrollbar Styling */
@@ -106,7 +126,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
+  background: var(--bg-tertiary);
   border-radius: var(--radius-full);
   transition: background var(--transition-base);
 }
@@ -126,21 +146,23 @@ body {
   background: var(--bg-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-light);
 }
 
 /* Card Styles */
 .card-modern {
-  background: var(--bg-secondary);
+  background: var(--bg-card);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-light);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-base);
 }
 
 .card-modern:hover {
-  border-color: rgba(55, 197, 179, 0.3);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-mint);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
@@ -163,7 +185,7 @@ body {
 }
 
 .btn-secondary {
-  background: var(--gradient-grape);
+  background: var(--gradient-mint);
   color: var(--text-primary);
   font-weight: 600;
   padding: var(--space-3) var(--space-5);
@@ -175,7 +197,7 @@ body {
 }
 
 .btn-secondary:hover {
-  box-shadow: var(--shadow-md), var(--shadow-glow-grape);
+  box-shadow: var(--shadow-md), var(--shadow-glow-mint);
   transform: translateY(-1px);
 }
 
@@ -198,21 +220,26 @@ body {
 
 /* Input Styles */
 .input-modern {
+  width: 100%;
+  padding: 14px 16px;
   background: var(--bg-tertiary);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid var(--border-light);
   border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  font-size: 15px;
   color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: 14px;
+  font-family: var(--font-sans);
   transition: all var(--transition-base);
   outline: none;
 }
 
+.input-modern:hover {
+  border-color: var(--border-medium);
+}
+
 .input-modern:focus {
-  border-color: var(--mint-800);
-  background: var(--bg-elevated);
-  box-shadow: 0 0 0 3px rgba(55, 197, 179, 0.1);
+  border-color: var(--mint-700);
+  box-shadow: 0 0 0 3px rgba(151, 240, 229, 0.2);
+  background: var(--bg-secondary);
 }
 
 .input-modern::placeholder {
@@ -295,6 +322,98 @@ body {
   padding: 0 var(--space-5);
 }
 
+/* Custom ConnectButton Styling - Apple-inspired */
+/* Override Sui dApp Kit default styles */
+button[data-testid="connect-button"],
+button:has(> div[data-testid="account-menu"]) {
+  background: var(--bg-tertiary) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1.5px solid var(--border-light) !important;
+  border-radius: var(--radius-full) !important;
+  padding: 10px 20px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+  transition: all var(--transition-base) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+button[data-testid="connect-button"]:hover,
+button:has(> div[data-testid="account-menu"]):hover {
+  background: linear-gradient(135deg, rgba(55, 197, 179, 0.2) 0%, rgba(197, 132, 246, 0.15) 100%) !important;
+  border-color: var(--mint-700) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Wallet address text styling */
+button:has(> div[data-testid="account-menu"]) div {
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+}
+
+/* Dropdown menu styling */
+div[role="menu"],
+div[role="menu"] > div {
+  background: var(--bg-secondary) !important;
+  border: 1.5px solid var(--border-medium) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: var(--space-2) !important;
+  box-shadow: var(--shadow-lg) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* Menu items - more specific selectors */
+div[role="menu"] button,
+div[role="menu"] a,
+div[role="menu"] [role="menuitem"],
+div[role="menu"] > div > button,
+div[role="menu"] > div > a {
+  background: var(--bg-tertiary) !important;
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-3) var(--space-4) !important;
+  font-size: 14px !important;
+  color: #B4BCD0 !important;
+  transition: all var(--transition-fast) !important;
+  border: 1px solid var(--border-light) !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  width: 100% !important;
+  margin-bottom: var(--space-1) !important;
+}
+
+/* Ensure text is visible */
+div[role="menu"] button *,
+div[role="menu"] a *,
+div[role="menu"] [role="menuitem"] * {
+  color: #B4BCD0 !important;
+}
+
+/* Hover state */
+div[role="menu"] button:hover,
+div[role="menu"] a:hover,
+div[role="menu"] [role="menuitem"]:hover,
+div[role="menu"] > div > button:hover,
+div[role="menu"] > div > a:hover {
+  background: linear-gradient(135deg, rgba(55, 197, 179, 0.2) 0%, rgba(197, 132, 246, 0.2) 100%) !important;
+  border-color: var(--mint-700) !important;
+  color: var(--mint-700) !important;
+  transform: translateX(4px) !important;
+}
+
+/* Hover state text */
+div[role="menu"] button:hover *,
+div[role="menu"] a:hover *,
+div[role="menu"] [role="menuitem"]:hover * {
+  color: var(--mint-700) !important;
+}
+
+/* Hide separator in dropdown menu */
+div[role="menu"] div[role="separator"],
+div[role="menu"] [class*="separator"] {
+  display: none !important;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .container-modern {
@@ -304,5 +423,10 @@ body {
   :root {
     --space-7: 32px;
     --space-8: 48px;
+  }
+  
+  /* Make grid single column on mobile */
+  [style*="gridTemplateColumns: \"1fr 1fr\""] {
+    grid-template-columns: 1fr !important;
   }
 }

@@ -1,7 +1,8 @@
-# MoveTree
+# LYNQ 🦑
 
-A decentralized LinkTree alternative built on Sui blockchain with Walrus hosting
-integration.
+> **Own Your Digital DNA**
+
+A decentralized identity and link sharing platform built on Sui blockchain with Walrus hosting integration. Create your on-chain profile, share your links, and truly own your digital presence.
 
 ## 🏗️ Project Structure
 
@@ -11,7 +12,7 @@ movetree/
 │  ├─ move/                 # Sui Move paketi (LinkTreeProfile)
 │  │  ├─ sources/
 │  │  └─ Move.toml
-│  └─ ui/                   # dApp Kit ile React app (LinkTree editör + public)
+│  └─ ui/                   # dApp Kit ile React app (LYNQ editör + public)
 │     ├─ src/
 │     │  ├─ app/            # private dashboard (create/update)
 │     │  ├─ public/         # public profile page (/u/:id, /@:name)

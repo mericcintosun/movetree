@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ConnectButton } from "@mysten/dapp-kit";
-import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
+import { Box, Container, Flex, Heading, Button, Text } from "@radix-ui/themes";
 import { Dashboard } from "./app/Dashboard";
 import { PublicProfile } from "./public/PublicProfile";
 import { LoginButtons } from "./auth/LoginButtons";
@@ -60,7 +60,7 @@ function App() {
           position: "sticky",
           top: 0,
           zIndex: 100,
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: "1px solid var(--border-light)",
         }}
       >
         <div className="container-modern">
@@ -72,18 +72,41 @@ function App() {
           >
             {/* Logo */}
             <Box>
-              <Heading
-                size="6"
-                className="text-gradient"
-                style={{
-                  fontWeight: 700,
-                  letterSpacing: "-0.02em",
-                  cursor: "pointer",
-                }}
+              <Flex 
+                align="center" 
+                gap="2"
+                style={{ cursor: "pointer" }}
                 onClick={() => setCurrentView("dashboard")}
               >
-                🌳 MoveTree
-              </Heading>
+                <div>
+                  <Heading
+                    size="6"
+                    style={{
+                      fontWeight: 700,
+                      letterSpacing: "-0.02em",
+                      background: "linear-gradient(135deg, #5DD3C6 0%, #37C5B3 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      marginBottom: "-4px",
+                    }}
+                  >
+                    LYNQ
+                  </Heading>
+                  <Text 
+                    size="1" 
+                    style={{ 
+                      color: "#FF7A59",
+                      fontSize: "10px",
+                      fontWeight: 500,
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Own Your Digital DNA
+                  </Text>
+                </div>
+              </Flex>
             </Box>
 
             {/* Navigation */}
@@ -111,11 +134,6 @@ function App() {
                 </button>
               </Flex>
               <LoginButtons />
-              <div style={{
-                borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
-                height: "32px",
-                margin: "0 8px",
-              }} />
               <ConnectButton />
             </Flex>
           </Flex>
@@ -172,7 +190,7 @@ function App() {
 
       {/* Footer */}
       <footer style={{
-        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        borderTop: "1px solid var(--border-light)",
         padding: "var(--space-5) 0",
         textAlign: "center",
         color: "var(--text-tertiary)",
@@ -181,9 +199,11 @@ function App() {
         zIndex: 1,
       }}>
         <div className="container-modern">
-          <p style={{ margin: 0 }}>
-            Built with 💚 on <span className="text-gradient">Sui Blockchain</span>
-          </p>
+          <Flex direction="column" gap="2" align="center">
+            <p style={{ margin: 0, fontSize: "13px" }}>
+              Built with 💚 on <span className="text-gradient">Sui Blockchain</span>
+            </p>
+          </Flex>
         </div>
       </footer>
     </>
